@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    name: Build backend (.NET)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+      - name: Restore
+        run: dotnet restore StockSweet.sln
+      - name: Build
+        run: dotnet build StockSweet.sln --no-restore --configuration Release
+
+  frontend:
+    name: Check frontend (HTML/CSS/JS)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Validate HTML
+        run: |
+          if find frontend -name "*.html" | grep -q .; then
+            npx --yes htmlhint "frontend/**/*.html"
+          else
+            echo "Nenhum arquivo HTML encontrado ainda, pulando."
+          fi
+      - name: Check JS syntax
+        run: |
+          if find frontend -name "*.js" | grep -q .; then
+            find frontend -name "*.js" -print0 | xargs -0 -n1 node --check
+          else
+            echo "Nenhum arquivo JS encontrado ainda, pulando."
+          fi
