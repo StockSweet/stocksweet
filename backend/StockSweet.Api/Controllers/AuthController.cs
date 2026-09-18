@@ -73,6 +73,7 @@ namespace StockSweet.Api.Controllers
                 Id = usuario.IdUsuario,
                 Nome = usuario.Nome,
                 Email = usuario.Email,
+                Nivel = usuario.Nivel,
             };
 
             return Created(
@@ -112,6 +113,7 @@ namespace StockSweet.Api.Controllers
                Id = usuario.IdUsuario,
                Nome = usuario.Nome,
                Email = usuario.Email,
+               Nivel = usuario.Nivel,
             };
 
             var token = _jwtService.GenerateToken(usuario);
@@ -162,7 +164,9 @@ namespace StockSweet.Api.Controllers
             {
                 Id = usuario.IdUsuario,
                 Nome = usuario.Nome,
-                Email = usuario.Email,            };
+                Email = usuario.Email,
+                Nivel = usuario.Nivel,
+            };
 
             return Ok(new
             {

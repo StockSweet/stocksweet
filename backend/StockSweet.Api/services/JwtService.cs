@@ -26,6 +26,7 @@ namespace StockSweet.Api.services
                 new Claim("id",usuario.IdUsuario.ToString()),
                 new Claim("nome", usuario.Nome),
                 new Claim("email", usuario.Email),
+                new Claim("perfil", usuario.Nivel.ToString()),
             };
 
             var key = new SymmetricSecurityKey(

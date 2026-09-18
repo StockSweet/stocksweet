@@ -1,0 +1,1156 @@
+/* ---------------------------------------------------------
+   StockSweet — Tela de login
+   Paleta: rosa suave, vinho, marrom, creme e dourado.
+--------------------------------------------------------- */
+
+:root {
+  --pink: #f6d6e5;
+  --wine: #8b4a5a;
+  --wine-dark: #723c49;
+  --brown: #6b3e2e;
+  --cream: #fff8f0;
+  --gold: #d99a4e;
+
+  --bg: var(--cream);
+  --panel-from: #6b3e2e;
+  --panel-to: #8b4a5a;
+  --surface: #ffffff;
+  --surface-border: #ece1d6;
+
+  --text-strong: #3d2a24;
+  --text: #6d5a52;
+  --text-muted: #a3897f;
+  --text-on-panel: #fdf1e9;
+  --text-on-panel-muted: rgba(253, 241, 233, 0.72);
+
+  --danger: #b3543f;
+  --danger-bg: #fbeae3;
+  --danger-border: #edc6b6;
+
+  --radius-lg: 28px;
+  --radius-md: 16px;
+  --radius-sm: 12px;
+
+  --shadow-btn: 0 14px 24px -12px rgba(139, 74, 90, 0.55);
+  --shadow-card: 0 40px 80px -30px rgba(107, 62, 46, 0.28), 0 14px 32px -16px rgba(139, 74, 90, 0.18);
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-soft: cubic-bezier(0.45, 0, 0.2, 1);
+
+  font-family: "Inter", system-ui, "Segoe UI", Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+h1,
+h2 {
+  font-family: "Fraunces", Georgia, serif;
+  margin: 0;
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+}
+
+button {
+  font-family: inherit;
+}
+
+/* ---------------------------------------------------------
+   Layout — split screen
+--------------------------------------------------------- */
+
+.auth {
+  min-height: 100svh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+/* celular e telas estreitas: só o formulário, painel de marca fica só no desktop */
+@media (max-width: 900px) {
+  .auth {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(100svh, 1fr);
+  }
+}
+
+/* ---------------------------------------------------------
+   Painel esquerdo — marca + animação
+--------------------------------------------------------- */
+
+.auth__panel {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(28px, 5vw, 64px);
+  background: linear-gradient(155deg, var(--panel-from) 0%, var(--panel-to) 62%, #9a5c6c 100%);
+  isolation: isolate;
+}
+
+/* essa regra precisa vir DEPOIS da base acima (mesma especificidade,
+   quem vem por último no arquivo vence) */
+@media (max-width: 900px) {
+  .auth__panel {
+    display: none;
+  }
+}
+
+.auth__blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(2px);
+  opacity: 0.35;
+  animation: float 18s ease-in-out infinite;
+}
+
+.auth__blob--1 {
+  width: 420px;
+  height: 420px;
+  left: -140px;
+  top: -120px;
+  background: radial-gradient(circle at 30% 30%, var(--pink), transparent 70%);
+}
+
+.auth__blob--2 {
+  width: 320px;
+  height: 320px;
+  right: -100px;
+  bottom: -80px;
+  background: radial-gradient(circle at 60% 40%, var(--gold), transparent 70%);
+  opacity: 0.22;
+  animation-duration: 22s;
+  animation-delay: -6s;
+}
+
+.auth__grain {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size: 26px 26px;
+  mix-blend-mode: overlay;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(24px, -18px) scale(1.06);
+  }
+}
+
+.auth__panel-content {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 420px;
+  color: var(--text-on-panel);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  animation: panel-in 0.9s var(--ease-out) both;
+}
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.auth__logo {
+  display: block;
+  object-fit: contain;
+}
+
+/* Ilustração animada */
+
+.auth__illustration {
+  position: relative;
+  overflow: hidden;
+  width: min(100%, 420px);
+  aspect-ratio: 1 / 1;
+  margin: clamp(4px, 2vw, 12px) 0 clamp(8px, 3vw, 18px);
+  transform: translate3d(var(--tilt-x, 0), var(--tilt-y, 0), 0);
+  transition: transform 0.3s var(--ease-soft);
+}
+
+.auth__illustration::before {
+  content: "";
+  position: absolute;
+  inset: 8%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(217, 154, 78, 0.35), rgba(217, 154, 78, 0) 68%);
+  filter: blur(6px);
+  animation: glow-pulse 5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes glow-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.94);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.04);
+  }
+}
+
+.auth__illustration svg {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* linha de produção: rolos girando, esteira em movimento, um braço com
+   garra que desce, fecha exatamente num doce, segura e sobe — os doces
+   seguem até a caixa de estoque no final. tudo na mesma velocidade
+   (esteira = doces = rolos) e o braço sincronizado com o doce--1, pra
+   sempre pegar um de verdade em vez de bater no vazio. */
+
+.illu__gear {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: gear-spin 24s linear infinite;
+}
+
+@keyframes gear-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.illu__roller-spin {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: roller-spin 3.4s linear infinite;
+}
+
+@keyframes roller-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.illu__belt-scroll {
+  animation: belt-scroll 3.4s linear infinite;
+}
+
+@keyframes belt-scroll {
+  to {
+    transform: translateX(-220px);
+  }
+}
+
+/* doces: mesma duração/velocidade da esteira, o --1 sempre passa pelo
+   centro (x=144) exatamente na metade do ciclo — é nesse instante que
+   o braço desce, então ele sempre pega ESSE doce, nunca o vazio */
+.illu__box-move {
+  animation: box-move 3.4s linear infinite;
+}
+
+.illu__box--1 {
+  animation-delay: 0s;
+}
+.illu__box--2 {
+  animation-delay: -1.133s;
+}
+.illu__box--3 {
+  animation-delay: -2.267s;
+}
+
+@keyframes box-move {
+  0% {
+    transform: translateX(-96px);
+    opacity: 0;
+  }
+  6% {
+    opacity: 1;
+  }
+  94% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(96px);
+    opacity: 0;
+  }
+}
+
+/* haste: presa na estrutura no topo, "estica" via scaleY (nunca se
+   solta). a garra desce pela mesma janela de tempo, então as duas
+   ficam sempre encostadas. */
+.illu__rod {
+  transform-box: fill-box;
+  transform-origin: top;
+  animation: rod-stretch 3.4s cubic-bezier(0.6, 0, 0.15, 1) infinite;
+}
+
+@keyframes rod-stretch {
+  0%,
+  42% {
+    transform: scaleY(1);
+  }
+  50% {
+    transform: scaleY(2.3);
+  }
+  58% {
+    transform: scaleY(2.3);
+  }
+  68%,
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+.illu__gripper-drop {
+  animation: gripper-drop 3.4s cubic-bezier(0.6, 0, 0.15, 1) infinite;
+}
+
+@keyframes gripper-drop {
+  0%,
+  42% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(26px);
+  }
+  58% {
+    transform: translateY(26px);
+  }
+  68%,
+  100% {
+    transform: translateY(0);
+  }
+}
+
+/* dedos da garra: abertos em repouso, fecham um pouco antes de tocar
+   o doce e reabrem só depois de já estar subindo de novo */
+.illu__finger {
+  transform-box: fill-box;
+  transform-origin: top;
+}
+
+.illu__finger--left {
+  animation: finger-left 3.4s cubic-bezier(0.6, 0, 0.15, 1) infinite;
+}
+.illu__finger--right {
+  animation: finger-right 3.4s cubic-bezier(0.6, 0, 0.15, 1) infinite;
+}
+
+@keyframes finger-left {
+  0%,
+  40% {
+    transform: rotate(-22deg);
+  }
+  47%,
+  61% {
+    transform: rotate(-4deg);
+  }
+  68%,
+  100% {
+    transform: rotate(-22deg);
+  }
+}
+
+@keyframes finger-right {
+  0%,
+  40% {
+    transform: rotate(22deg);
+  }
+  47%,
+  61% {
+    transform: rotate(4deg);
+  }
+  68%,
+  100% {
+    transform: rotate(22deg);
+  }
+}
+
+.illu__impact {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: impact-flash 3.4s ease-out infinite;
+}
+
+@keyframes impact-flash {
+  0%,
+  46% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  51% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  62%,
+  100% {
+    opacity: 0;
+    transform: scale(1.6);
+  }
+}
+
+.illu__stock-pile {
+  opacity: 0;
+  animation: stock-in 0.6s var(--ease-out) 0.9s forwards;
+}
+
+@keyframes stock-in {
+  to {
+    opacity: 1;
+  }
+}
+
+.auth__headline {
+  font-size: clamp(22px, 2.6vw, 30px);
+  line-height: 1.22;
+  font-weight: 500;
+  letter-spacing: -0.3px;
+  margin-bottom: 10px;
+}
+
+.auth__subline {
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: var(--text-on-panel-muted);
+  max-width: 340px;
+}
+
+.auth__highlights {
+  list-style: none;
+  margin: 20px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 10px;
+}
+
+.auth__highlights li {
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(253, 241, 233, 0.25);
+  color: var(--text-on-panel);
+  opacity: 0;
+  animation: item-in 0.6s var(--ease-out) both;
+}
+
+.auth__highlights li:nth-child(1) {
+  animation-delay: 0.4s;
+}
+.auth__highlights li:nth-child(2) {
+  animation-delay: 0.52s;
+}
+.auth__highlights li:nth-child(3) {
+  animation-delay: 0.64s;
+}
+
+@keyframes item-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ---------------------------------------------------------
+   Painel direito — formulário
+--------------------------------------------------------- */
+
+.auth__form-side {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(28px, 5vw, 56px) clamp(20px, 5vw, 40px);
+  background: var(--cream);
+  background-image: radial-gradient(rgba(139, 74, 90, 0.07) 1px, transparent 1px);
+  background-size: 24px 24px;
+  isolation: isolate;
+}
+
+.auth__form-side::before,
+.auth__form-side::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(2px);
+  z-index: -1;
+  animation: float 20s ease-in-out infinite;
+}
+
+.auth__form-side::before {
+  width: 380px;
+  height: 380px;
+  right: -160px;
+  top: -140px;
+  background: radial-gradient(circle at 40% 40%, var(--pink), transparent 70%);
+  opacity: 0.45;
+}
+
+.auth__form-side::after {
+  width: 300px;
+  height: 300px;
+  left: -140px;
+  bottom: -120px;
+  background: radial-gradient(circle at 50% 50%, var(--gold), transparent 72%);
+  opacity: 0.22;
+  animation-duration: 24s;
+  animation-delay: -8s;
+}
+
+.auth__form-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: clamp(32px, 4.5vw, 48px);
+  animation: form-in 0.8s var(--ease-out) both;
+  animation-delay: 0.15s;
+  transition: opacity 0.35s var(--ease-out), transform 0.35s var(--ease-out);
+}
+
+.auth__form-wrap.is-hidden {
+  opacity: 0;
+  transform: translateY(-10px) scale(0.98);
+  pointer-events: none;
+  position: absolute;
+}
+
+@keyframes form-in {
+  from {
+    opacity: 0;
+    transform: translateY(22px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.auth__form-header,
+.auth__form .field,
+.auth__form .auth__row,
+.auth__form .btn,
+.auth__footer {
+  opacity: 0;
+  animation: item-rise 0.55s var(--ease-out) forwards;
+}
+
+.auth__form-header {
+  animation-delay: 0.3s;
+}
+.auth__form .field:nth-of-type(1) {
+  animation-delay: 0.4s;
+}
+.auth__form .field:nth-of-type(2) {
+  animation-delay: 0.48s;
+}
+.auth__form .auth__row {
+  animation-delay: 0.56s;
+}
+.auth__form .btn {
+  animation-delay: 0.64s;
+}
+.auth__footer {
+  animation-delay: 0.72s;
+}
+
+@keyframes item-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.auth__form-header {
+  margin-bottom: 22px;
+}
+
+.auth__form-header h2 {
+  font-size: 24px;
+  color: var(--text-strong);
+  margin-bottom: 4px;
+}
+
+.auth__form-header p {
+  font-size: 13.5px;
+  color: var(--text-muted);
+}
+
+.auth__logo--form {
+  width: 124px;
+  height: 124px;
+  margin: 0 auto 8px;
+}
+
+/* Alerta de erro */
+
+.auth__alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 13px;
+  margin-bottom: 16px;
+  border-radius: var(--radius-sm);
+  background: var(--danger-bg);
+  border: 1px solid var(--danger-border);
+  color: var(--danger);
+  font-size: 13px;
+  line-height: 1.45;
+  animation: alert-in 0.3s var(--ease-out) both;
+}
+
+.auth__alert svg {
+  flex: none;
+  width: 17px;
+  height: 17px;
+  margin-top: 1px;
+}
+
+.auth__alert[hidden] {
+  display: none;
+}
+
+@keyframes alert-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.auth__alert.shake {
+  animation: alert-in 0.3s var(--ease-out) both, shake 0.42s var(--ease-out) 0.1s;
+}
+
+@keyframes shake {
+  10%,
+  90% {
+    transform: translateX(-1px);
+  }
+  20%,
+  80% {
+    transform: translateX(2px);
+  }
+  30%,
+  50%,
+  70% {
+    transform: translateX(-4px);
+  }
+  40%,
+  60% {
+    transform: translateX(4px);
+  }
+}
+
+/* Campos com label flutuante */
+
+.auth__form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.field__control {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  border: 1.5px solid var(--surface-border);
+  transition: border-color 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out), transform 0.15s var(--ease-out);
+}
+
+.field__control:focus-within {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 4px rgba(217, 154, 78, 0.16);
+  transform: translateY(-1px);
+}
+
+.field__icon {
+  width: 17px;
+  height: 17px;
+  margin-left: 14px;
+  color: var(--text-muted);
+  flex: none;
+  transition: color 0.2s var(--ease-out);
+}
+
+.field__control:focus-within .field__icon {
+  color: var(--wine);
+}
+
+.field__control input {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 21px 12px 8px 10px;
+  font-size: 14.5px;
+  color: var(--text-strong);
+}
+
+.field__control input::placeholder {
+  color: transparent;
+}
+
+.field__control input:disabled {
+  opacity: 0.6;
+}
+
+.field label {
+  position: absolute;
+  left: 41px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 14.5px;
+  color: var(--text-muted);
+  pointer-events: none;
+  transition: all 0.16s var(--ease-out);
+}
+
+.field__control input:focus + label,
+.field__control input:not(:placeholder-shown) + label {
+  top: 10px;
+  transform: translateY(0) scale(0.8);
+  transform-origin: left top;
+  color: var(--wine);
+  font-weight: 600;
+}
+
+.field__control.is-invalid,
+.field input.is-invalid {
+  border-color: var(--danger-border);
+}
+
+input.is-invalid {
+  border-color: var(--danger-border) !important;
+}
+
+.field__toggle {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin-right: 4px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 0.15s var(--ease-out), background 0.15s var(--ease-out);
+}
+
+.field__toggle:hover {
+  color: var(--wine);
+  background: rgba(139, 74, 90, 0.08);
+}
+
+.field__toggle svg {
+  width: 17px;
+  height: 17px;
+}
+
+.field__error {
+  min-height: 15px;
+  font-size: 12px;
+  color: var(--danger);
+  padding-left: 2px;
+}
+
+/* Linha auxiliar (lembrar / esqueci senha) */
+
+.auth__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: -2px;
+}
+
+.checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.checkbox__box {
+  width: 17px;
+  height: 17px;
+  border-radius: 5px;
+  border: 1.5px solid var(--surface-border);
+  background: var(--surface);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  transition: background 0.15s var(--ease-out), border-color 0.15s var(--ease-out);
+}
+
+.checkbox__box::after {
+  content: "";
+  width: 9px;
+  height: 6px;
+  border-left: 2px solid var(--cream);
+  border-bottom: 2px solid var(--cream);
+  transform: rotate(-45deg) scale(0);
+  transition: transform 0.15s var(--ease-out);
+  margin-top: -1px;
+}
+
+.checkbox input:checked + .checkbox__box {
+  background: var(--wine);
+  border-color: var(--wine);
+}
+
+.checkbox input:checked + .checkbox__box::after {
+  transform: rotate(-45deg) scale(1);
+}
+
+.checkbox input:focus-visible + .checkbox__box {
+  box-shadow: 0 0 0 3px rgba(217, 154, 78, 0.3);
+}
+
+.auth__link {
+  font-size: 13px;
+  color: var(--wine);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.auth__link:hover {
+  text-decoration: underline;
+}
+
+/* Botão de envio */
+
+.btn {
+  position: relative;
+  margin-top: 4px;
+  height: 48px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, var(--wine) 0%, var(--wine-dark) 100%);
+  background-size: 160% 160%;
+  background-position: 0% 50%;
+  color: var(--cream);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+  box-shadow: var(--shadow-btn);
+  transition: transform 0.18s var(--ease-out), box-shadow 0.18s var(--ease-out), background-position 0.5s var(--ease-out);
+  animation: btn-breathe 3.6s ease-in-out infinite;
+}
+
+@keyframes btn-breathe {
+  0%,
+  100% {
+    box-shadow: var(--shadow-btn);
+  }
+  50% {
+    box-shadow: 0 16px 30px -12px rgba(217, 154, 78, 0.55);
+  }
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 28px -12px rgba(139, 74, 90, 0.6);
+  background-position: 100% 50%;
+  animation-play-state: paused;
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn:disabled {
+  cursor: default;
+}
+
+.btn__label {
+  transition: opacity 0.15s var(--ease-out);
+}
+
+.btn__spinner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border-radius: 50%;
+  border: 2.5px solid rgba(255, 248, 240, 0.35);
+  border-top-color: var(--cream);
+  opacity: 0;
+  transform: scale(0.7);
+  transition: opacity 0.15s var(--ease-out), transform 0.15s var(--ease-out);
+}
+
+.btn.is-loading .btn__label {
+  opacity: 0;
+}
+
+.btn.is-loading .btn__spinner {
+  opacity: 1;
+  transform: scale(1);
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: scale(1) rotate(360deg);
+  }
+}
+
+/* Rodapé */
+
+.auth__footer {
+  margin-top: 22px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.auth__footer a {
+  color: var(--wine);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.auth__footer a:hover {
+  text-decoration: underline;
+}
+
+/* ---------------------------------------------------------
+   Estado de sucesso
+--------------------------------------------------------- */
+
+.auth__success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  max-width: 320px;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.45s var(--ease-out), transform 0.45s var(--ease-out);
+}
+
+.auth__success.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.auth__success[hidden] {
+  display: none;
+}
+
+.auth__success-check {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  color: var(--wine);
+  margin-bottom: 6px;
+}
+
+.confetti {
+  --angle: calc(var(--i) * 45deg);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 2px;
+  margin: -3px 0 0 -3px;
+  opacity: 0;
+}
+
+.confetti:nth-child(odd) {
+  background: var(--gold);
+}
+.confetti:nth-child(even) {
+  background: var(--pink);
+}
+
+.auth__success.is-visible .confetti {
+  animation: confetti-burst 0.7s var(--ease-out) 0.25s both;
+}
+
+@keyframes confetti-burst {
+  0% {
+    opacity: 1;
+    transform: rotate(var(--angle)) translate(0, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(var(--angle)) translate(46px, 0) scale(0.4);
+  }
+}
+
+.auth__success-circle {
+  opacity: 0.25;
+}
+
+.auth__success-tick {
+  stroke-dasharray: 40;
+  stroke-dashoffset: 40;
+}
+
+.auth__success.is-visible .auth__success-tick {
+  animation: draw-tick 0.5s var(--ease-out) 0.2s forwards;
+}
+
+@keyframes draw-tick {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.auth__success h2 {
+  font-size: 23px;
+  color: var(--text-strong);
+}
+
+.auth__success p {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+/* ---------------------------------------------------------
+   Responsivo
+--------------------------------------------------------- */
+
+/* telas grandes: dá mais respiro ao conteúdo em vez de deixá-lo pequeno no meio do vazio */
+@media (min-width: 1400px) {
+  .auth__panel-content {
+    max-width: 560px;
+  }
+  .auth__illustration {
+    width: min(100%, 480px);
+  }
+  .auth__form-wrap {
+    max-width: 480px;
+  }
+}
+
+@media (max-width: 600px) {
+  .auth__logo--form {
+    width: 102px;
+    height: 102px;
+  }
+}
+
+@media (max-width: 380px) {
+  .auth__logo--form {
+    width: 88px;
+    height: 88px;
+  }
+
+  .auth__form-side {
+    padding: 24px 16px 32px;
+  }
+
+  .btn {
+    height: 46px;
+  }
+}
+
+/* landscape curto: card compacto pra caber sem cortar */
+@media (max-height: 480px) and (orientation: landscape) {
+  .auth__form-side {
+    padding: 16px 20px;
+    align-items: flex-start;
+  }
+
+  .auth__form-wrap {
+    max-width: 360px;
+  }
+
+  .auth__logo--form {
+    width: 70px;
+    height: 70px;
+    margin-bottom: 4px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

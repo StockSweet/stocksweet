@@ -61,9 +61,12 @@ if(strConexao is null)
     throw new Exception("valor nulo");
 };
 
+// Versão fixa em vez de AutoDetect: evita que toda inicialização (e o
+// dotnet ef) precise abrir uma conexão real só pra descobrir a versão do
+// servidor. Ajuste o número se o MySQL do seu time for outra versão 8.x.
 builder.Services.AddDbContext<StockDbContext>(options => options.UseMySql(
     strConexao,
-    ServerVersion.AutoDetect(strConexao))); 
+    new MySqlServerVersion(new Version(8, 0, 36))));
 
 #endregion
 
