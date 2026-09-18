@@ -26,6 +26,9 @@ namespace StockSweet.Api.entidades
         [Required]
         public required string Senha { get; set; }
 
+        [Required]
+        public NivelUsuario Nivel { get; set; } = NivelUsuario.Usuario;
+
         public DateTime Created { get; set; } = DateTime.Now;
 
     }

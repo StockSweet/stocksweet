@@ -26,7 +26,7 @@ De forma geral, o sistema permite:
 
 | Camada | Tecnologia |
 |---|---|
-| Front-end | React |
+| Front-end | HTML, CSS e JavaScript |
 | Back-end | C# (.NET / ASP.NET Core Web API) |
 | Banco de dados | MySQL |
 | Prototipação de telas | Android Studio (mockups/validação de fluxos durante as sprints) |
@@ -131,23 +131,30 @@ Reuniões de **Daily Scrum** são realizadas ao longo de cada sprint para regist
 
 ### Pré-requisitos
 - [.NET SDK](https://dotnet.microsoft.com/) (versão utilizada no back-end)
-- [Node.js](https://nodejs.org/) e npm/yarn (front-end React)
 - [MySQL](https://www.mysql.com/) instalado e em execução
+- Qualquer servidor de arquivos estáticos para o front-end (ex: extensão Live Server do VS Code, `npx serve` ou `python -m http.server`)
 
 ### Back-end (C# / .NET)
+Cada dev roda seu **próprio MySQL local** (não é um banco compartilhado) e usa as migrations do EF Core pra ter o mesmo schema. A connection string e a chave do JWT ficam fora do repositório, configuradas via `dotnet user-secrets` (nunca em `appsettings.json`):
+
 ```bash
-cd backend
+cd backend/StockSweet.Api
 dotnet restore
-dotnet ef database update   # aplica as migrations no MySQL
+dotnet user-secrets init
+dotnet user-secrets set "ConnectionStrings:MySql" "server=127.0.0.1;port=3306;database=stocksweet_db;user=root;password=SUA_SENHA;"
+dotnet user-secrets set "JwtConfig:Key" "uma-chave-aleatoria-qualquer-com-32+-chars"
+dotnet ef database update   # cria o banco (se não existir) e aplica as migrations
 dotnet run
 ```
 
-### Front-end (React)
+### Front-end (HTML, CSS e JavaScript)
+O front-end é estático (sem build/bundler) e consome a API via `fetch`. Basta servir a pasta `frontend/` em `http://localhost:5173` (porta já liberada no CORS do back-end):
 ```bash
 cd frontend
-npm install
-npm start
+npx serve -l 5173
+# ou: python -m http.server 5173
 ```
+A URL base da API é configurada em `frontend/js/config.js`.
 
 ### Banco de dados
 1. Crie um banco MySQL (ex: `stocksweet_db`);
@@ -165,12 +172,11 @@ stocksweet/
 │   ├── Models/
 │   ├── Services/
 │   └── Data/
-├── frontend/          # Aplicação React
-│   ├── src/
-│   │   ├── components/
-│   │   ├── pages/
-│   │   └── services/
-│   └── public/
+├── frontend/          # Aplicação estática (HTML, CSS e JavaScript)
+│   ├── css/
+│   ├── js/
+│   ├── assets/
+│   └── index.html
 └── docs/               # Declaração de Visão, diagramas, relatório técnico
 ```
 

@@ -16,6 +16,12 @@ namespace StockSweet.Api.banco
 
         public DbSet<Usuario> Usuario {get;set;}
 
-
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Usuario>()
+                .Property(u => u.Nivel)
+                .HasConversion<string>()
+                .HasMaxLength(20);
+        }
     }
 }
