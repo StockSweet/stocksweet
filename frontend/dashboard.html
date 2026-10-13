@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light dark" />
+  <title>StockSweet · Painel</title>
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+  <script>
+    // Aplica o tema antes do primeiro desenho pra não piscar claro -> escuro.
+    (function () {
+      var tema = null;
+      try { tema = localStorage.getItem("stocksweet.tema"); } catch (e) {}
+      if (tema !== "dark" && tema !== "light") {
+        tema = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      }
+      document.documentElement.dataset.theme = tema;
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="css/dashboard.css" />
+</head>
+<body data-role="gestor">
+  <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+
+  <div class="app" id="app">
+    <!-- ============ Navegação lateral ============ -->
+    <aside class="sidebar" id="sidebar" aria-label="Navegação principal">
+      <div class="sidebar__brand">
+        <img class="sidebar__mark" src="assets/favicon.svg" alt="" width="38" height="38" />
+        <span class="sidebar__word">Stock<em>Sweet</em></span>
+        <button type="button" class="icon-btn sidebar__close" id="sidebarClose" aria-label="Fechar menu">
+          <span data-icon="x"></span>
+        </button>
+      </div>
+
+      <nav class="sidebar__nav">
+        <p class="sidebar__group">Visão geral</p>
+        <a class="nav-item is-active" href="dashboard.html" aria-current="page">
+          <span data-icon="dashboard"></span><span>Painel</span>
+        </a>
+
+        <p class="sidebar__group">Estoque</p>
+        <button type="button" class="nav-item" data-soon="Insumos"><span data-icon="box"></span><span>Insumos</span></button>
+        <button type="button" class="nav-item" data-soon="Fornecedores"><span data-icon="truck"></span><span>Fornecedores</span></button>
+        <button type="button" class="nav-item" data-soon="Movimentações"><span data-icon="swap"></span><span>Movimentações</span></button>
+
+        <p class="sidebar__group">Produção</p>
+        <button type="button" class="nav-item" data-soon="Receitas"><span data-icon="recipe"></span><span>Receitas</span></button>
+        <button type="button" class="nav-item" data-only="gestor" data-soon="Precificação"><span data-icon="tag"></span><span>Precificação</span></button>
+        <button type="button" class="nav-item" data-only="gestor" data-soon="Relatórios"><span data-icon="chart"></span><span>Relatórios</span></button>
+      </nav>
+
+      <div class="sidebar__foot">
+        <div class="health" id="sideHealth" aria-live="polite"></div>
+        <button type="button" class="nav-item" data-soon="Configurações"><span data-icon="sliders"></span><span>Configurações</span></button>
+      </div>
+    </aside>
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+    <div class="main">
+      <!-- ============ Barra superior ============ -->
+      <header class="topbar">
+        <button type="button" class="icon-btn topbar__menu" id="menuBtn" aria-label="Abrir menu" aria-controls="sidebar" aria-expanded="false">
+          <span data-icon="menu" data-size="20"></span>
+        </button>
+
+        <div class="search" id="search">
+          <span class="search__icon" data-icon="search"></span>
+          <input
+            id="searchInput"
+            type="search"
+            class="search__input"
+            placeholder="Buscar insumos e receitas…"
+            autocomplete="off"
+            spellcheck="false"
+            role="combobox"
+            aria-expanded="false"
+            aria-controls="searchList"
+            aria-autocomplete="list"
+            aria-label="Buscar insumos e receitas"
+          />
+          <kbd class="search__kbd" aria-hidden="true">/</kbd>
+          <ul class="search__list" id="searchList" role="listbox" aria-label="Resultados da busca" hidden></ul>
+        </div>
+
+        <div class="topbar__actions">
+          <button type="button" class="icon-btn" id="themeBtn" aria-label="Alternar entre tema claro e escuro">
+            <span class="theme-sun" data-icon="sun" data-size="19"></span>
+            <span class="theme-moon" data-icon="moon" data-size="19"></span>
+          </button>
+
+          <div class="popover-wrap">
+            <button type="button" class="icon-btn" id="bellBtn" aria-label="Notificações" aria-haspopup="true" aria-expanded="false" aria-controls="notifPanel">
+              <span data-icon="bell" data-size="19"></span>
+              <span class="badge" id="bellBadge" hidden>0</span>
+            </button>
+            <div class="popover popover--notifs" id="notifPanel" hidden>
+              <div class="popover__head">
+                <strong>Notificações</strong>
+                <button type="button" class="link-btn" id="notifReadAll">Marcar todas como lidas</button>
+              </div>
+              <ul class="notifs" id="notifList"></ul>
+            </div>
+          </div>
+
+          <div class="popover-wrap">
+            <button type="button" class="user-btn" id="userBtn" aria-haspopup="true" aria-expanded="false" aria-controls="userPanel">
+              <span class="avatar" id="avatar" aria-hidden="true">–</span>
+              <span class="user-btn__meta">
+                <strong id="userName">Usuário</strong>
+                <small id="userRole">Usuário</small>
+              </span>
+              <span class="user-btn__chev" data-icon="chevron-down" data-size="16"></span>
+            </button>
+            <div class="popover popover--user" id="userPanel" hidden>
+              <div class="user-card">
+                <span class="avatar avatar--lg" id="avatarLg" aria-hidden="true">–</span>
+                <div>
+                  <strong id="userNameFull">Usuário</strong>
+                  <small id="userEmail"></small>
+                </div>
+              </div>
+              <div class="demo">
+                <p class="demo__label">Modo demonstração · ver o painel como</p>
+                <div class="segmented segmented--block" id="roleSwitch" role="group" aria-label="Perfil de acesso">
+                  <button type="button" data-role-set="gestor">Gestor</button>
+                  <button type="button" data-role-set="usuario">Usuário</button>
+                </div>
+              </div>
+              <button type="button" class="menu-item" id="logoutBtn"><span data-icon="logout"></span>Sair da conta</button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- ============ Conteúdo ============ -->
+      <main class="content" id="conteudo" tabindex="-1">
+        <section class="page-head">
+          <div>
+            <p class="eyebrow" id="hoje"></p>
+            <h1 id="saudacao">Olá</h1>
+            <p class="page-head__sub" id="resumo"></p>
+          </div>
+          <button type="button" class="btn btn--primary" id="novoMovimento">
+            <span data-icon="plus" data-size="18"></span>
+            Registrar movimentação
+          </button>
+        </section>
+
+        <section class="filters" aria-label="Filtros do painel">
+          <span class="filters__label" id="periodoLabel">Período</span>
+          <div class="segmented" id="periodo" role="radiogroup" aria-labelledby="periodoLabel"></div>
+          <span class="filters__range" id="periodoIntervalo"></span>
+          <button type="button" class="refresh" id="refreshBtn">
+            <span data-icon="refresh" data-size="16"></span>
+            <span id="refreshLabel">Atualizado agora</span>
+          </button>
+        </section>
+
+        <div class="dash" id="dash">
+          <section class="kpis" id="kpis" aria-label="Indicadores principais"></section>
+
+          <div class="grid">
+            <!-- Entradas x saídas -->
+            <section class="card card--mov" aria-labelledby="movTitulo">
+              <header class="card__head">
+                <div>
+                  <h2 class="card__title" id="movTitulo">Entradas e saídas</h2>
+                  <p class="card__sub" id="movSub"></p>
+                </div>
+                <div class="segmented segmented--sm" id="movView" role="group" aria-label="Forma de exibição">
+                  <button type="button" class="is-active" data-view="chart" aria-pressed="true"><span data-icon="chart-line" data-size="15"></span>Gráfico</button>
+                  <button type="button" data-view="table" aria-pressed="false"><span data-icon="table" data-size="15"></span>Tabela</button>
+                </div>
+              </header>
+              <div class="card__body">
+                <div id="movChart"></div>
+                <div class="table-wrap" id="movTable" hidden></div>
+              </div>
+              <footer class="card__foot" id="movInsight"></footer>
+            </section>
+
+            <!-- Alertas -->
+            <section class="card card--alertas" id="alertasCard" aria-labelledby="alertasTitulo">
+              <header class="card__head">
+                <div>
+                  <h2 class="card__title" id="alertasTitulo">Alertas de estoque</h2>
+                  <p class="card__sub" id="alertasSub"></p>
+                </div>
+                <span class="count-pill" id="alertasCount">0</span>
+              </header>
+              <div class="card__body card__body--flush">
+                <ul class="alert-list" id="alertasList"></ul>
+              </div>
+            </section>
+
+            <!-- Categorias -->
+            <section class="card card--cat" aria-labelledby="catTitulo">
+              <header class="card__head">
+                <div>
+                  <h2 class="card__title" id="catTitulo">Insumos por categoria</h2>
+                  <p class="card__sub" id="catSub"></p>
+                </div>
+                <div class="segmented segmented--sm" id="catModo" role="group" aria-label="Métrica exibida">
+                  <button type="button" class="is-active" data-modo="estoque" aria-pressed="true">Em estoque</button>
+                  <button type="button" data-modo="consumo" aria-pressed="false">Consumo</button>
+                </div>
+              </header>
+              <div class="card__body"><div id="catChart"></div></div>
+              <footer class="card__foot" id="catHint">Clique em uma categoria para filtrar a lista de insumos.</footer>
+            </section>
+
+            <!-- Receitas (gestor) -->
+            <section class="card card--rec" data-only="gestor" id="recCard" aria-labelledby="recTitulo">
+              <header class="card__head">
+                <div>
+                  <h2 class="card__title" id="recTitulo">Receitas e margem</h2>
+                  <p class="card__sub">Custo calculado com o preço atual de cada insumo</p>
+                </div>
+              </header>
+              <div class="goal">
+                <label for="metaMargem" class="goal__label">Margem desejada</label>
+                <input type="range" id="metaMargem" min="20" max="80" step="1" value="60" />
+                <output class="goal__value" id="metaValor" for="metaMargem">60%</output>
+              </div>
+              <div class="card__body card__body--flush">
+                <div class="rec-list" id="recList"></div>
+              </div>
+            </section>
+
+            <!-- Receitas (bloqueado para o perfil Usuário) -->
+            <section class="card card--rec card--locked" data-only="usuario" aria-label="Receitas e margem (restrito)">
+              <div class="locked__ghost" aria-hidden="true">
+                <span style="--w: 82%"></span><span style="--w: 64%"></span><span style="--w: 71%"></span><span style="--w: 48%"></span><span style="--w: 58%"></span>
+              </div>
+              <div class="locked__msg">
+                <span class="locked__icon" data-icon="lock" data-size="22"></span>
+                <h2 class="card__title">Margens e preços sugeridos</h2>
+                <p>Essa área é exclusiva do perfil <strong>Gestor</strong>. Peça acesso ao gestor da sua confeitaria para ver custos e margens por receita.</p>
+              </div>
+            </section>
+
+            <!-- Insumos -->
+            <section class="card card--insumos" id="insumosCard" aria-labelledby="insumosTitulo">
+              <header class="card__head card__head--wrap">
+                <div>
+                  <h2 class="card__title" id="insumosTitulo">Insumos</h2>
+                  <p class="card__sub" id="insumosSub"></p>
+                </div>
+                <div class="toolbar">
+                  <label class="input-icon">
+                    <span data-icon="search" data-size="16"></span>
+                    <input id="tblBusca" type="search" placeholder="Filtrar insumos" aria-label="Filtrar insumos" autocomplete="off" />
+                  </label>
+                  <div class="segmented segmented--sm" id="tblStatus" role="group" aria-label="Situação do estoque">
+                    <button type="button" class="is-active" data-status="todos" aria-pressed="true">Todos</button>
+                    <button type="button" data-status="alerta" aria-pressed="false">Em alerta</button>
+                  </div>
+                  <button type="button" class="btn btn--ghost btn--sm" id="exportBtn" data-only="gestor">
+                    <span data-icon="download" data-size="16"></span>Exportar CSV
+                  </button>
+                </div>
+              </header>
+              <div class="chips" id="tblChips" hidden></div>
+              <div class="table-wrap table-wrap--insumos">
+                <table class="tbl" id="insumosTabela"></table>
+              </div>
+              <footer class="tbl-foot">
+                <span id="tblInfo"></span>
+                <div class="pager">
+                  <button type="button" class="icon-btn icon-btn--sm" id="pgPrev" aria-label="Página anterior"><span data-icon="chevron-left" data-size="16"></span></button>
+                  <span id="pgLabel" aria-live="polite"></span>
+                  <button type="button" class="icon-btn icon-btn--sm" id="pgNext" aria-label="Próxima página"><span data-icon="chevron-right" data-size="16"></span></button>
+                </div>
+              </footer>
+            </section>
+
+            <!-- Feed -->
+            <section class="card card--feed" aria-labelledby="feedTitulo">
+              <header class="card__head">
+                <div>
+                  <h2 class="card__title" id="feedTitulo">Últimas movimentações</h2>
+                  <p class="card__sub">Entradas e saídas registradas</p>
+                </div>
+              </header>
+              <div class="card__body card__body--flush">
+                <ul class="feed" id="feedList"></ul>
+              </div>
+            </section>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- ============ Modal: registrar movimentação ============ -->
+  <div class="overlay" id="movModal" hidden>
+    <div class="overlay__scrim" data-close></div>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="movModalTitulo">
+      <header class="modal__head">
+        <h2 id="movModalTitulo">Registrar movimentação</h2>
+        <button type="button" class="icon-btn" data-close aria-label="Fechar"><span data-icon="x"></span></button>
+      </header>
+
+      <form id="movForm" novalidate>
+        <div class="segmented segmented--block segmented--tipo" id="movTipo" role="radiogroup" aria-label="Tipo de movimentação">
+          <button type="button" role="radio" aria-checked="true" data-tipo="entrada"><span data-icon="arrow-in" data-size="16"></span>Entrada</button>
+          <button type="button" role="radio" aria-checked="false" data-tipo="saida"><span data-icon="arrow-out" data-size="16"></span>Saída</button>
+        </div>
+
+        <label class="fld">
+          <span class="fld__label">Insumo</span>
+          <select id="movInsumo" data-autofocus></select>
+        </label>
+
+        <label class="fld">
+          <span class="fld__label">Quantidade</span>
+          <span class="fld__suffix">
+            <input id="movQtd" type="text" inputmode="decimal" placeholder="0" autocomplete="off" />
+            <span id="movUn">kg</span>
+          </span>
+          <small class="fld__error" id="movQtdErro" role="alert"></small>
+        </label>
+
+        <div class="preview" id="movPreview" aria-live="polite"></div>
+
+        <label class="fld">
+          <span class="fld__label">Observação <em>(opcional)</em></span>
+          <input id="movObs" type="text" maxlength="80" placeholder="Ex.: compra semanal, lote vencido…" autocomplete="off" />
+        </label>
+
+        <footer class="modal__foot">
+          <button type="button" class="btn btn--ghost" data-close>Cancelar</button>
+          <button type="submit" class="btn btn--primary" id="movSubmit">Registrar</button>
+        </footer>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============ Gaveta: detalhes do insumo ============ -->
+  <div class="overlay overlay--drawer" id="drawer" hidden>
+    <div class="overlay__scrim" data-close></div>
+    <aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="drawerTitulo">
+      <div id="drawerConteudo"></div>
+    </aside>
+  </div>
+
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+
+  <script type="module" src="js/dashboard.js"></script>
+</body>
+</html>

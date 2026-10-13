@@ -1,4 +1,12 @@
 import { API_BASE_URL } from "./config.js";
+import { TOKEN_KEY, USER_KEY, getSession } from "./session.js";
+
+const DASHBOARD_URL = "dashboard.html";
+
+// Já está logado: não faz sentido pedir e-mail e senha de novo.
+if (getSession()) {
+  window.location.replace(DASHBOARD_URL);
+}
 
 const form = document.getElementById("loginForm");
 const emailInput = document.getElementById("email");
@@ -12,9 +20,6 @@ const toggleSenhaBtn = document.getElementById("toggleSenha");
 const formWrap = document.querySelector(".auth__form-wrap");
 const successState = document.getElementById("successState");
 const successName = document.getElementById("successName");
-
-const TOKEN_KEY = "stocksweet.token";
-const USER_KEY = "stocksweet.usuario";
 
 function setFieldError(input, errorEl, message) {
   input.classList.toggle("is-invalid", Boolean(message));
@@ -97,6 +102,9 @@ function showSuccess(usuario, manterConectado) {
   formWrap.classList.add("is-hidden");
   successState.hidden = false;
   requestAnimationFrame(() => successState.classList.add("is-visible"));
+
+  // dá tempo da animação de sucesso aparecer antes de seguir pro painel
+  window.setTimeout(() => window.location.assign(DASHBOARD_URL), 1500);
 }
 
 toggleSenhaBtn.addEventListener("click", () => {

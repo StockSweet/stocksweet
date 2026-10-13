@@ -156,6 +156,17 @@ npx serve -l 5173
 ```
 A URL base da API é configurada em `frontend/js/config.js`.
 
+**Fluxo de telas:** `index.html` (login) → `dashboard.html` (painel). O painel exige sessão: sem token válido no `localStorage`/`sessionStorage`, volta para o login; e quem já está logado pula o login e vai direto pro painel. O botão "Sair" limpa a sessão.
+
+**Painel (dados fictícios):** por enquanto o painel usa dados mock gerados em `frontend/js/dashboard/mock-data.js` — quando os endpoints existirem, é ali o ponto de troca. Os gráficos são SVG desenhados à mão (sem biblioteca) e a tela respeita o perfil do usuário (RNF01): o **Gestor** vê margens, receitas, precificação e exportação do saldo; o **Usuário** vê um bloco bloqueado no lugar. No menu do usuário há um *modo demonstração* pra alternar entre os dois perfis sem precisar de outra conta.
+
+> Pra ver o painel sem subir o back-end, rode no console do navegador (na página de login) e abra `dashboard.html`:
+> ```js
+> sessionStorage.setItem("stocksweet.token", "x.e30.x");
+> sessionStorage.setItem("stocksweet.usuario", JSON.stringify({ nome: "Seu Nome", email: "voce@exemplo.com", nivel: "Gestor" }));
+> ```
+> Isso só libera a tela (a checagem do front é conveniência de UX); qualquer chamada real à API continua exigindo um JWT válido.
+
 ### Banco de dados
 1. Crie um banco MySQL (ex: `stocksweet_db`);
 2. Configure a connection string no `appsettings.json` (ou `.env` equivalente) do back-end;
@@ -173,10 +184,11 @@ stocksweet/
 │   ├── Services/
 │   └── Data/
 ├── frontend/          # Aplicação estática (HTML, CSS e JavaScript)
-│   ├── css/
-│   ├── js/
+│   ├── css/           # style.css (login) e dashboard.css (painel)
+│   ├── js/            # login.js, session.js, dashboard.js e dashboard/ (módulos do painel)
 │   ├── assets/
-│   └── index.html
+│   ├── index.html     # login
+│   └── dashboard.html # painel pós-login
 └── docs/               # Declaração de Visão, diagramas, relatório técnico
 ```
 
