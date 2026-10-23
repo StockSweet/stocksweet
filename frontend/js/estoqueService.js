@@ -48,3 +48,24 @@ function registrarEntradaSimulada(dadosMovimentacao) {
     }, 500);
   });
 }
+
+/**
+ * 4. Função assíncrona que simula o envio do registro de saída para o servidor
+ * @param {Object} dadosSaida - Objeto contendo os dados do formulário de baixa/saída
+ */
+function registrarSaidaSimulada(dadosSaida) {
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      // Validação: Quantidade deve ser maior que zero
+      if (dadosSaida.quantidade <= 0) {
+        reject("A quantidade de saída deve ser maior que zero.");
+      } else {
+        console.log("Saída Registrada com sucesso (Mock):", dadosSaida);
+        resolve({ 
+          sucesso: true, 
+          mensagem: "Saída de mercadoria registrada com sucesso!" 
+        });
+      }
+    }, 500);
+  });
+}
