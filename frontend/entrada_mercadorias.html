@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <!-- Define a codificação de caracteres para suportar acentuação em português -->
+  <meta charset="UTF-8">
+  
+  <!-- Garante a responsividade em telas de telemóveis e tablets -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- Título que aparece na aba do navegador -->
+  <title>StockSweet - Entrada de Mercadorias</title>
+  
+  <!-- Importa o ficheiro de estilos global (onde estão as variáveis de cores e layout padrão) -->
+  <link rel="stylesheet" href="css/style.css">
+  
+  <style>
+    /* 1. Estilização geral da página utilizando as variáveis globais (:root) do style.css */
+    body {
+      background-color: var(--cream, #fff8f0);
+      font-family: var(--font-family, "Inter", system-ui, sans-serif);
+      color: var(--text, #6d5a52);
+      margin: 0;
+      padding: 0;
+    }
+
+    /* 2. Cartão/Container principal que centraliza o formulário no ecrã */
+    .container-form {
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 30px;
+      background: var(--surface, #ffffff);
+      border-radius: var(--radius-lg, 28px);
+      box-shadow: var(--shadow, 0 14px 32px rgba(107, 62, 46, 0.1));
+      border: 1px solid var(--surface-border, #ecd6d6);
+    }
+
+    /* 3. Estilo dos títulos da página */
+    h2 {
+      color: var(--wine, #723c49);
+      margin-top: 0;
+      font-size: 1.8rem;
+    }
+
+    /* 4. Estilo das instruções secundárias */
+    p {
+      color: var(--text-muted, #a18974);
+      margin-bottom: 25px;
+    }
+
+    /* 5. Agrupamento visual dos campos do formulário (Label + Input empilhados) */
+    .form-group {
+      margin-bottom: 20px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* 6. Estilização dos rótulos (nomes dos campos) */
+    .form-group label {
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: var(--wine, #723c49);
+    }
+
+    /* 7. Estilização dos campos de texto, números, caixa de seleção e observação */
+    .form-group input, 
+    .form-group select, 
+    .form-group textarea {
+      padding: 12px;
+      border: 1px solid var(--surface-border, #ecd6d6);
+      border-radius: var(--radius-md, 16px);
+      background-color: var(--bg, #fff8f0);
+      font-size: 1rem;
+      color: var(--text-strong, #3d2a24);
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+
+    /* Efeito visual ao clicar/focar num campo de entrada */
+    .form-group input:focus, 
+    .form-group select:focus, 
+    .form-group textarea:focus {
+      border-color: var(--wine, #723c49);
+    }
+
+    /* 8. Botão principal de submissão do formulário */
+    .btn-submit {
+      background-color: var(--wine, #723c49);
+      color: white;
+      padding: 12px 20px;
+      border: none;
+      border-radius: var(--radius-md, 16px);
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 1rem;
+      width: 100%;
+      transition: opacity 0.2s ease;
+    }
+
+    /* Efeito de opacidade ao passar o rato por cima do botão */
+    .btn-submit:hover {
+      opacity: 0.9;
+    }
+
+    /* 9. Caixas de alertas de erro ou sucesso (iniciam ocultas com display: none) */
+    .alert {
+      padding: 12px;
+      margin-bottom: 20px;
+      border-radius: var(--radius-sm, 12px);
+      display: none;
+      font-size: 0.95rem;
+    }
+
+    /* Estilo para mensagem de sucesso (verde) */
+    .alert-success { 
+      background-color: #d4edda; 
+      color: #155724; 
+      border: 1px solid #c3e6cb;
+    }
+
+    /* Estilo para mensagem de erro (vermelho) */
+    .alert-error { 
+      background-color: #f8d7da; 
+      color: #721c24; 
+      border: 1px solid #f5c6cb;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- CONTAINER PRINCIPAL -->
+  <div class="container-form">
+    <h2>Registro de Entrada de Mercadorias</h2>
+    <p>Adicione novas aquisições de insumos no sistema.</p>
+
+    <!-- Caixa onde são exibidas as mensagens de sucesso ou erro do JavaScript -->
+    <div id="mensagemFeedback" class="alert"></div>
+
+    <!-- FORMULÁRIO DE ENTRADA -->
+    <form id="formEntrada">
+      
+      <!-- Campo 1: Seleção do Insumo -->
+      <div class="form-group">
+        <label for="selectInsumo">Insumo:</label>
+        <select id="selectInsumo" required>
+          <option value="">A carregar insumos...</option>
+        </select>
+      </div>
+
+      <!-- Campo 2: Quantidade do Insumo recebido -->
+      <div class="form-group">
+        <label for="inputQuantidade">Quantidade:</label>
+        <input type="number" id="inputQuantidade" step="0.01" min="0.01" placeholder="Ex: 10.5" required>
+      </div>
+
+      <!-- Campo 3: Valor Unitário pago por item/kg -->
+      <div class="form-group">
+        <label for="inputValorUnitario">Valor Unitário (R$):</label>
+        <input type="number" id="inputValorUnitario" step="0.01" min="0.01" placeholder="Ex: 5.90" required>
+      </div>
+
+      <!-- Campo 4: Observações adicionais, Nota Fiscal ou Fornecedor -->
+      <div class="form-group">
+        <label for="inputObservacao">Observação / Fornecedor / Nota Fiscal:</label>
+        <textarea id="inputObservacao" rows="3" placeholder="Detalhes adicionais da compra..."></textarea>
+      </div>
+
+      <!-- Botão para enviar o formulário -->
+      <button type="submit" class="btn-submit" id="btnSalvar">Registrar Entrada</button>
+    </form>
+  </div>
+
+  <!-- INCLUSÃO DOS SCRIPTS JAVASCRIPT -->
+  
+  <!-- 1. Importa a camada de dados simulados (Mock Service) -->
+  <script src="js/estoqueService.js"></script>
+  
+  <!-- 2. Lógica de integração e dinamismo do formulário -->
+  <script>
+    // Aguarda o HTML carregar completamente na tela antes de executar o script
+    document.addEventListener("DOMContentLoaded", async () => {
+      
+      // Captura os elementos do HTML pelos seus IDs para manipulação no JS
+      const selectInsumo = document.getElementById("selectInsumo");
+      const formEntrada = document.getElementById("formEntrada");
+      const mensagemFeedback = document.getElementById("mensagemFeedback");
+
+      // PASSO A: Carregar a lista de insumos no elemento <select>
+      try {
+        // Chama a função assíncrona do arquivo estoqueService.js
+        const insumos = await obterInsumosSimulados();
+        
+        // Limpa as opções padrão do select
+        selectInsumo.innerHTML = '<option value="">Selecione um insumo...</option>';
+        
+        // Preenche o <select> criando uma <option> para cada insumo retornado
+        insumos.forEach(item => {
+          const option = document.createElement("option");
+          option.value = item.idInsumo;
+          option.textContent = `${item.nome} (${item.unidadeMedida})`;
+          selectInsumo.appendChild(option);
+        });
+      } catch (err) {
+        exibirMensagem("Erro ao carregar insumos.", "error");
+      }
+
+      // PASSO B: Capturar o envio (submit) do formulário
+      formEntrada.addEventListener("submit", async (e) => {
+        // Impede que a página recarregue ao clicar no botão
+        e.preventDefault();
+
+        // Monta o objeto com os dados preenchidos no formulário
+        const novaEntrada = {
+          tipo: "ENTRADA",
+          idInsumo: document.getElementById("selectInsumo").value,
+          quantidade: parseFloat(document.getElementById("inputQuantidade").value),
+          valorUnitario: parseFloat(document.getElementById("inputValorUnitario").value),
+          data: new Date().toISOString().split('T')[0], // Pega a data atual no formato YYYY-MM-DD
+          observacao: document.getElementById("inputObservacao").value
+        };
+
+        try {
+          // Envia os dados para a função do serviço (Mock)
+          const resposta = await registrarEntradaSimulada(novaEntrada);
+          
+          // Se deu certo, exibe a mensagem verde e limpa os campos
+          exibirMensagem(resposta.mensagem, "success");
+          formEntrada.reset();
+        } catch (erro) {
+          // Se houver algum erro de validação, exibe a mensagem vermelha
+          exibirMensagem(erro, "error");
+        }
+      });
+
+      // PASSO C: Função auxiliar para alternar a exibição da caixa de alerta
+      function exibirMensagem(texto, tipo) {
+        mensagemFeedback.textContent = texto;
+        mensagemFeedback.className = `alert alert-${tipo === "success" ? "success" : "error"}`;
+        mensagemFeedback.style.display = "block";
+      }
+    });
+  </script>
+</body>
+</html>
