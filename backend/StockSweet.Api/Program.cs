@@ -121,6 +121,7 @@ builder.Services.AddHealthChecks();
 #region scopped
 builder.Services.AddScoped<JwtService>();
 builder.Services.AddScoped<EmailValidacao>();
+builder.Services.AddScoped<EstoqueService>();
 #endregion
 
 
