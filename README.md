@@ -147,6 +147,19 @@ dotnet ef database update   # cria o banco (se não existir) e aplica as migrati
 dotnet run
 ```
 
+**Endpoints de estoque** (todos exigem `Authorization: Bearer <token>`; Usuário e Gestor podem usar):
+
+| Método | Rota | Descrição |
+|---|---|---|
+| GET | `/api/insumos` | Lista insumos com saldo, preço de compra e estoque mínimo |
+| GET | `/api/insumos/{id}` | Detalha um insumo |
+| POST | `/api/movimentacoes/entrada` | Registra entrada: `{ idInsumo, quantidade, valorUnitario, observacao? }`. Soma ao saldo e atualiza o `precoCompra` do insumo |
+| POST | `/api/movimentacoes/saida` | Registra saída: `{ idInsumo, motivo, quantidade, observacao? }` (`motivo`: `PRODUCAO`, `PERDA_VALIDADE`, `AVARIA`, `OUTRO`). Retorna 400 se a quantidade passar do saldo |
+| GET | `/api/movimentacoes` | Histórico (mais recentes primeiro). Filtros opcionais: `tipo` (`ENTRADA`/`SAIDA`), `idInsumo`, `de`, `ate` (`yyyy-MM-dd`), `limite` (1–200, padrão 50) |
+| GET | `/api/movimentacoes/{id}` | Detalha uma movimentação |
+
+A data e o usuário da movimentação vêm do servidor (relógio e token), não do corpo da requisição. Nas saídas, o `valorUnitario` gravado é o `precoCompra` do insumo no momento da baixa.
+
 ### Front-end (HTML, CSS e JavaScript)
 O front-end é estático (sem build/bundler) e consome a API via `fetch`. Basta servir a pasta `frontend/` em `http://localhost:5173` (porta já liberada no CORS do back-end):
 ```bash
