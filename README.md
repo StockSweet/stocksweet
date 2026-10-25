@@ -127,8 +127,6 @@ Reuniões de **Daily Scrum** são realizadas ao longo de cada sprint para regist
 
 ## 🚀 Como executar o projeto
 
-> Ajuste os comandos abaixo conforme a estrutura real de pastas do repositório.
-
 ### Pré-requisitos
 - [.NET SDK](https://dotnet.microsoft.com/) (versão utilizada no back-end)
 - [MySQL](https://www.mysql.com/) instalado e em execução
@@ -160,6 +158,8 @@ A URL base da API é configurada em `frontend/js/config.js`.
 
 **Painel (dados fictícios):** por enquanto o painel usa dados mock gerados em `frontend/js/dashboard/mock-data.js` — quando os endpoints existirem, é ali o ponto de troca. Os gráficos são SVG desenhados à mão (sem biblioteca) e a tela respeita o perfil do usuário (RNF01): o **Gestor** vê margens, receitas, precificação e exportação do saldo; o **Usuário** vê um bloco bloqueado no lugar. No menu do usuário há um *modo demonstração* pra alternar entre os dois perfis sem precisar de outra conta.
 
+**Movimentação de estoque (dados fictícios):** `entrada_mercadorias.html` (US02) e `saida_mercadorias.html` (US03) trazem os formulários de entrada e saída de mercadorias. Ambos usam `frontend/js/estoqueService.js`, um serviço mock que simula a API (lista de insumos, `registrarEntradaSimulada` e `registrarSaidaSimulada`, com latência e validação de quantidade/valor maior que zero). Quando os endpoints existirem, é nesse arquivo que as funções passam a fazer `fetch` para a API. Essas telas ainda não têm link no menu do painel; são abertas direto pela URL.
+
 > Pra ver o painel sem subir o back-end, rode no console do navegador (na página de login) e abra `dashboard.html`:
 > ```js
 > sessionStorage.setItem("stocksweet.token", "x.e30.x");
@@ -168,28 +168,36 @@ A URL base da API é configurada em `frontend/js/config.js`.
 > Isso só libera a tela (a checagem do front é conveniência de UX); qualquer chamada real à API continua exigindo um JWT válido.
 
 ### Banco de dados
-1. Crie um banco MySQL (ex: `stocksweet_db`);
-2. Configure a connection string no `appsettings.json` (ou `.env` equivalente) do back-end;
-3. Rode as migrations/scripts de criação das tabelas descritas em [Modelo de dados](#-modelo-de-dados).
+O schema é criado pelas migrations do EF Core (`backend/StockSweet.Api/Migrations`), então não há script SQL manual:
+1. Tenha um MySQL local em execução;
+2. Configure a connection string via `dotnet user-secrets` (veja [Back-end](#back-end-c--net)), nunca em `appsettings.json`;
+3. Rode `dotnet ef database update` em `backend/StockSweet.Api`.
+
+Hoje as migrations cobrem apenas `Usuario` (com o campo `Nivel`: Usuário/Gestor). As demais entidades do [Modelo de dados](#-modelo-de-dados) entram nas próximas sprints.
 
 ---
 
-## 📁 Estrutura de pastas (sugerida)
+## 📁 Estrutura de pastas
 
 ```
 stocksweet/
-├── backend/          # API em C# (.NET)
-│   ├── Controllers/
-│   ├── Models/
-│   ├── Services/
-│   └── Data/
-├── frontend/          # Aplicação estática (HTML, CSS e JavaScript)
-│   ├── css/           # style.css (login) e dashboard.css (painel)
-│   ├── js/            # login.js, session.js, dashboard.js e dashboard/ (módulos do painel)
+├── backend/StockSweet.Api/   # API em C# (.NET)
+│   ├── Controllers/          # AuthController (login e cadastro)
+│   ├── DTOs/AuthDto/
+│   ├── banco/                # StockDbContext (EF Core)
+│   ├── entidades/            # Usuario, NivelUsuario
+│   ├── services/             # JwtService, EmailValidacao
+│   └── Migrations/
+├── frontend/                 # Aplicação estática (HTML, CSS e JavaScript)
+│   ├── css/                  # style.css (login e formulários) e dashboard.css (painel)
+│   ├── js/                   # config.js, login.js, session.js, estoqueService.js (mock),
+│   │                         # dashboard.js e dashboard/ (módulos do painel)
 │   ├── assets/
-│   ├── index.html     # login
-│   └── dashboard.html # painel pós-login
-└── docs/               # Declaração de Visão, diagramas, relatório técnico
+│   ├── index.html            # login
+│   ├── dashboard.html        # painel pós-login
+│   ├── entrada_mercadorias.html
+│   └── saida_mercadorias.html
+└── docs/                     # Declaração de Visão, diagramas, relatório técnico
 ```
 
 ---
