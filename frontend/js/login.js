@@ -1,11 +1,14 @@
 import { API_BASE_URL } from "./config.js";
-import { TOKEN_KEY, USER_KEY, getSession } from "./session.js";
+import { TOKEN_KEY, USER_KEY, getSession, proximaUrlSegura } from "./session.js";
 
 const DASHBOARD_URL = "dashboard.html";
 
+// ?next=<página> traz o usuário de volta para onde ele estava (só caminho relativo do próprio site).
+const DESTINO_URL = proximaUrlSegura(new URLSearchParams(window.location.search).get("next")) ?? DASHBOARD_URL;
+
 // Já está logado: não faz sentido pedir e-mail e senha de novo.
 if (getSession()) {
-  window.location.replace(DASHBOARD_URL);
+  window.location.replace(DESTINO_URL);
 }
 
 const form = document.getElementById("loginForm");
@@ -104,7 +107,7 @@ function showSuccess(usuario, manterConectado) {
   requestAnimationFrame(() => successState.classList.add("is-visible"));
 
   // dá tempo da animação de sucesso aparecer antes de seguir pro painel
-  window.setTimeout(() => window.location.assign(DASHBOARD_URL), 1500);
+  window.setTimeout(() => window.location.assign(DESTINO_URL), 1500);
 }
 
 toggleSenhaBtn.addEventListener("click", () => {
