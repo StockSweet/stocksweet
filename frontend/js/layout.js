@@ -239,8 +239,10 @@ export function montarLayout({ ativo } = {}) {
         return h(
           "li",
           { class: "crumbs__item" },
-          ultimo || !item.href
-            ? h("span", { class: "crumbs__current", "aria-current": ultimo ? "page" : null }, item.rotulo)
+          ultimo
+            ? h("span", { class: "crumbs__current", "aria-current": "page" }, item.rotulo)
+            : !item.href
+              ? h("span", { class: "crumbs__static" }, item.rotulo)
             : h("a", { class: "crumbs__link", href: item.href }, item.rotulo),
           ultimo ? null : h("span", { class: "crumbs__sep icon-slot", "aria-hidden": "true" }, icon("chevron-right", 14)),
         );

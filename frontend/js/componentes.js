@@ -3,6 +3,7 @@
 // formulário, estados vazios, esqueletos e a dica de ajuda.
 
 import { h, icon } from "./dashboard/dom.js";
+import { brl } from "./dashboard/format.js";
 
 const FOCUSAVEL = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 const DURACAO_SAIDA = 240;
@@ -309,4 +310,143 @@ export const normalizar = (texto) =>
 export function lerNumero(texto) {
   const limpo = String(texto).trim().replace(/\s/g, "").replace(",", ".");
   return /^\d*\.?\d+$/.test(limpo) ? Number(limpo) : Number.NaN;
+}
+
+/* ---------------------------------------------------------
+   Combo pesquisável
+--------------------------------------------------------- */
+
+// Combo pesquisável de insumos (input + lista), simples e acessível por teclado.
+// detalhe(insumo) é o texto à direita de cada opção; textoUsado, o das opções já usadas.
+export function criarCombo(aoEscolher, { detalhe = (i) => `${brl(i.precoCompra)} / ${i.unidadeMedida}`, textoUsado = "já na receita" } = {}) {
+  const idLista = novoId("combo-lista");
+  const input = h("input", {
+    id: novoId("insumo"),
+    type: "text",
+    class: "combo__input",
+    role: "combobox",
+    autocomplete: "off",
+    spellcheck: "false",
+    "aria-expanded": "false",
+    "aria-controls": idLista,
+    "aria-autocomplete": "list",
+    placeholder: "Buscar insumo…",
+  });
+  const listaEl = h("ul", { class: "combo__list", id: idLista, role: "listbox", "aria-label": "Insumos", hidden: true });
+  const el = h("div", { class: "combo" }, input, h("span", { class: "combo__chev" }, icon("chevron-down", 16)), listaEl);
+
+  let insumos = [];
+  let usados = new Set();
+  let escolhido = null;
+  let visiveis = [];
+  let ativo = -1;
+
+  function fechar() {
+    listaEl.hidden = true;
+    input.setAttribute("aria-expanded", "false");
+    input.removeAttribute("aria-activedescendant");
+    ativo = -1;
+  }
+
+  function marcar(indice) {
+    ativo = indice;
+    [...listaEl.querySelectorAll("[role=option]")].forEach((opcao, i) => {
+      opcao.classList.toggle("is-active", i === ativo);
+      opcao.setAttribute("aria-selected", String(i === ativo));
+      if (i === ativo) {
+        input.setAttribute("aria-activedescendant", opcao.id);
+        opcao.scrollIntoView({ block: "nearest" });
+      }
+    });
+  }
+
+  function escolher(insumo) {
+    if (usados.has(insumo.idInsumo)) return;
+    escolhido = insumo;
+    input.value = insumo.nome;
+    fechar();
+    aoEscolher(insumo);
+  }
+
+  function abrir() {
+    const termo = normalizar(input.value.trim());
+    visiveis = insumos.filter((i) => !termo || normalizar(i.nome).includes(termo));
+    listaEl.replaceChildren(
+      ...(visiveis.length
+        ? visiveis.map((insumo, i) => {
+            const jaUsado = usados.has(insumo.idInsumo);
+            return h(
+              "li",
+              {
+                id: `${idLista}-${i}`,
+                role: "option",
+                class: "combo__opt",
+                "aria-selected": "false",
+                "aria-disabled": jaUsado ? "true" : null,
+                onpointerdown: (e) => e.preventDefault(),
+                onclick: () => escolher(insumo),
+                onpointermove: () => ativo !== i && marcar(i),
+              },
+              h("span", null, insumo.nome),
+              h("small", null, jaUsado ? textoUsado : detalhe(insumo)),
+            );
+          })
+        : [h("li", { class: "combo__empty", role: "presentation" }, insumos.length ? "Nenhum insumo com esse nome." : "Nenhum insumo cadastrado.")]),
+    );
+    listaEl.hidden = false;
+    input.setAttribute("aria-expanded", "true");
+    if (visiveis.length) marcar(Math.max(0, visiveis.findIndex((i) => !usados.has(i.idInsumo))));
+  }
+
+  input.addEventListener("click", () => listaEl.hidden && abrir());
+  input.addEventListener("input", () => {
+    if (escolhido) {
+      escolhido = null;
+      aoEscolher(null);
+    }
+    abrir();
+  });
+  input.addEventListener("blur", () => {
+    window.setTimeout(() => {
+      // Texto igual ao nome de um insumo livre conta como escolha.
+      const exato = !escolhido && insumos.find((i) => normalizar(i.nome) === normalizar(input.value.trim()) && !usados.has(i.idInsumo));
+      if (exato) escolher(exato);
+      fechar();
+    }, 120);
+  });
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      if (listaEl.hidden) abrir();
+      else if (visiveis.length) marcar((ativo + (event.key === "ArrowDown" ? 1 : -1) + visiveis.length) % visiveis.length);
+    } else if (event.key === "Enter" && !listaEl.hidden && visiveis[ativo]) {
+      event.preventDefault();
+      escolher(visiveis[ativo]);
+    } else if (event.key === "Escape" && !listaEl.hidden) {
+      event.stopPropagation();
+      fechar();
+    }
+  });
+
+  return {
+    el,
+    input,
+    get escolhido() {
+      return escolhido;
+    },
+    definirInsumos(lista, idsUsados = []) {
+      insumos = lista;
+      usados = new Set(idsUsados);
+      // mantém a escolha atual apontando para os dados mais novos do insumo
+      if (escolhido) escolhido = lista.find((i) => i.idInsumo === escolhido.idInsumo) ?? null;
+    },
+    escolher(insumo) {
+      escolher(insumo);
+    },
+    limpar() {
+      escolhido = null;
+      input.value = "";
+      fechar();
+    },
+  };
 }
