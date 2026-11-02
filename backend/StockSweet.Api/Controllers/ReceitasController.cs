@@ -34,11 +34,7 @@ namespace StockSweet.Api.Controllers
         [HttpGet("{id:int}")]
         public async Task<IActionResult> Obter(int id)
         {
-            var receita = await _context.Receita
-                .AsNoTracking()
-                .Where(r => r.IdReceita == id)
-                .Select(ParaResposta)
-                .FirstOrDefaultAsync();
+            var receita = await ObterResposta(id);
 
             if (receita == null)
             {
@@ -139,12 +135,34 @@ namespace StockSweet.Api.Controllers
             return NoContent();
         }
 
-        private Task<ReceitaRespostaDto?> ObterResposta(int id)
+        // Receita com a ficha técnica, numa única consulta.
+        private Task<ReceitaDetalheRespostaDto?> ObterResposta(int id)
         {
             return _context.Receita
                 .AsNoTracking()
                 .Where(r => r.IdReceita == id)
-                .Select(ParaResposta)
+                .Select(r => new ReceitaDetalheRespostaDto
+                {
+                    IdReceita = r.IdReceita,
+                    Nome = r.Nome,
+                    Descricao = r.Descricao,
+                    RendimentoReceita = r.RendimentoReceita,
+                    UnidadeRendimento = r.UnidadeRendimento,
+                    DataCadastro = r.DataCadastro,
+                    QuantidadeItens = r.Itens.Count,
+                    Itens = r.Itens
+                        .OrderBy(i => i.Insumo!.Nome)
+                        .Select(i => new ItemReceitaRespostaDto
+                        {
+                            IdItem = i.IdItem,
+                            IdInsumo = i.IdInsumo,
+                            NomeInsumo = i.Insumo!.Nome,
+                            UnidadeMedida = i.Insumo.UnidadeMedida,
+                            Quantidade = i.Quantidade,
+                            PrecoCompraAtual = i.Insumo.PrecoCompra,
+                        })
+                        .ToList(),
+                })
                 .FirstOrDefaultAsync();
         }
 
@@ -192,6 +210,7 @@ namespace StockSweet.Api.Controllers
                 RendimentoReceita = r.RendimentoReceita,
                 UnidadeRendimento = r.UnidadeRendimento,
                 DataCadastro = r.DataCadastro,
+                QuantidadeItens = r.Itens.Count,
             };
     }
 }
