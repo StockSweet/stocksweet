@@ -30,6 +30,11 @@ namespace StockSweet.Api.entidades
 
         public DateTime DataCadastro { get; set; } = DateTime.Now;
 
+        // Margem de lucro própria da receita (%, sobre o custo). Só o Gestor define.
+        // Null = usa a margem padrão da ConfiguracaoPrecificacao.
+        [Precision(5, 2)]
+        public decimal? MargemLucro { get; set; }
+
         public List<ItemReceita> Itens { get; set; } = new();
     }
 }
