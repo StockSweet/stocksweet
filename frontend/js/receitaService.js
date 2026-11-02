@@ -1,5 +1,5 @@
 // Cadastro de receitas: chamadas à API real (api/receitas e api/insumos) + lógica da tela
-// cadastro_receitas.html (lista, criar, editar, excluir e ficha técnica de cada receita).
+// cadastro_receitas.html (lista, criar, editar, excluir, ficha técnica e custo de cada receita).
 import { API_BASE_URL } from "./config.js";
 import { clearSession, getSession } from "./session.js";
 
@@ -100,6 +100,15 @@ export function removerItem(idReceita, idItem) {
   return requisitar(`${URL_RECEITAS}/${idReceita}/itens/${idItem}`, { method: "DELETE" });
 }
 
+// Custo de produção (calculado ao vivo pela API com o preço de compra atual dos insumos).
+export function obterCusto(idReceita) {
+  return requisitar(`${URL_RECEITAS}/${idReceita}/custo`);
+}
+
+export function listarCustos() {
+  return requisitar(`${URL_RECEITAS}/custos`);
+}
+
 /* ---------------------------------------------------------
    Tela
 --------------------------------------------------------- */
@@ -132,10 +141,24 @@ const estadoItens = document.getElementById("estadoItens");
 const tabelaItens = document.getElementById("tabelaItens");
 const corpoItens = document.getElementById("corpoItens");
 
+const cartaoCusto = document.getElementById("cartaoCusto");
+const tituloCusto = document.getElementById("tituloCusto");
+const btnRecalcular = document.getElementById("btnRecalcular");
+const estadoCusto = document.getElementById("estadoCusto");
+const conteudoCusto = document.getElementById("conteudoCusto");
+const valorCustoTotal = document.getElementById("valorCustoTotal");
+const rotuloCustoUnidade = document.getElementById("rotuloCustoUnidade");
+const valorCustoUnidade = document.getElementById("valorCustoUnidade");
+const listaAlertas = document.getElementById("listaAlertas");
+const tabelaCusto = document.getElementById("tabelaCusto");
+const corpoCusto = document.getElementById("corpoCusto");
+const calculadoEm = document.getElementById("calculadoEm");
+
 const formatadorNumero = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 3 });
 const formatadorMoeda = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
 let receitas = [];
+let custos = new Map(); // idReceita -> resumo de custo (GET api/receitas/custos)
 let idEmEdicao = null;
 
 // Estado da ficha técnica aberta.
@@ -180,6 +203,23 @@ function criarBotao(texto, classe, aoClicar) {
   return botao;
 }
 
+// Custo total e por unidade da receita; o selo avisa quando o cálculo tem alertas
+// (sem itens, insumo sem preço ou sem saldo). Sem o resumo, mostra "—".
+function criarCelulasCusto(custo) {
+  if (!custo) return [criarCelula("—", "numero"), criarCelula("—", "numero")];
+
+  const total = criarCelula(formatadorMoeda.format(custo.custoTotal), "numero");
+  if (custo.possuiAlertas) {
+    const selo = document.createElement("span");
+    selo.className = "selo-alerta";
+    selo.textContent = "Atenção";
+    selo.title = "O cálculo tem alertas. Abra a ficha técnica para ver os detalhes.";
+    total.append(selo);
+  }
+
+  return [total, criarCelula(formatadorMoeda.format(custo.custoPorUnidade), "numero")];
+}
+
 function renderizarLista() {
   corpoTabela.replaceChildren();
 
@@ -200,6 +240,7 @@ function renderizarLista() {
       criarCelula(receita.nome, "nome"),
       criarCelula(`${formatadorNumero.format(receita.rendimentoReceita)} ${receita.unidadeRendimento}`),
       criarCelula(String(receita.quantidadeItens ?? 0)),
+      ...criarCelulasCusto(custos.get(receita.idReceita)),
       criarCelula(receita.descricao ?? "—"),
     );
 
@@ -220,7 +261,10 @@ function renderizarLista() {
 
 async function carregarLista() {
   try {
-    receitas = await listarReceitas();
+    // O resumo de custo é um complemento: se falhar, a lista aparece com "—" no lugar.
+    const [lista, resumo] = await Promise.all([listarReceitas(), listarCustos().catch(() => [])]);
+    receitas = lista;
+    custos = new Map(resumo.map((c) => [c.idReceita, c]));
     renderizarLista();
   } catch (erro) {
     estadoLista.textContent = "Não foi possível carregar as receitas.";
@@ -419,6 +463,65 @@ function iniciarEdicaoItem(item) {
   inputQuantidadeItem.focus();
 }
 
+/* ---------------------------------------------------------
+   Painel de custo (receita aberta na ficha técnica)
+--------------------------------------------------------- */
+
+function renderizarCusto(custo) {
+  valorCustoTotal.textContent = formatadorMoeda.format(custo.custoTotal);
+  rotuloCustoUnidade.textContent = `Custo por unidade (rendimento:${formatadorNumero.format(custo.rendimentoReceita)} ${custo.unidadeRendimento})`;
+  valorCustoUnidade.textContent = formatadorMoeda.format(custo.custoPorUnidade);
+
+  listaAlertas.replaceChildren();
+  for (const alerta of custo.alertas) {
+    const li = document.createElement("li");
+    li.textContent = alerta.mensagem;
+    listaAlertas.append(li);
+  }
+  listaAlertas.hidden = custo.alertas.length === 0;
+
+  corpoCusto.replaceChildren();
+  for (const item of custo.itens) {
+    const linha = document.createElement("tr");
+    linha.append(
+      criarCelula(item.nomeInsumo, "nome"),
+      criarCelula(`${formatadorNumero.format(item.quantidade)} ${item.unidadeMedida}`, "numero"),
+      criarCelula(`${formatadorMoeda.format(item.precoCompraAtual)} / ${item.unidadeMedida}`, "numero"),
+      criarCelula(formatadorMoeda.format(item.custoItem), "numero"),
+      criarCelula(`${formatadorNumero.format(item.percentualDoCusto)}%`, "numero"),
+    );
+    corpoCusto.append(linha);
+  }
+  tabelaCusto.hidden = custo.itens.length === 0;
+
+  calculadoEm.textContent = `Calculado em ${new Date(custo.calculadoEm).toLocaleString("pt-BR")}.`;
+  estadoCusto.hidden = true;
+  conteudoCusto.hidden = false;
+}
+
+// Busca o custo na API a cada chamada (nada fica guardado no front): chamada ao abrir a ficha,
+// depois de adicionar/editar/remover itens e no botão Recalcular.
+async function carregarCusto() {
+  if (!receitaAberta) return;
+
+  const idReceita = receitaAberta.idReceita;
+  try {
+    const custo = await obterCusto(idReceita);
+    if (receitaAberta?.idReceita !== idReceita) return; // a ficha mudou enquanto a resposta vinha
+    renderizarCusto(custo);
+  } catch (erro) {
+    if (receitaAberta?.idReceita !== idReceita) return;
+    conteudoCusto.hidden = true;
+    estadoCusto.textContent = `Não foi possível calcular o custo: ${erro.message}`;
+    estadoCusto.hidden = false;
+  }
+}
+
+// Itens mudaram: atualiza ficha, painel de custo e a lista (coluna de custo) de uma vez.
+function atualizarAposMudarItens() {
+  return Promise.all([carregarItens(), carregarCusto(), carregarLista()]);
+}
+
 async function abrirFicha(receita) {
   receitaAberta = receita;
   insumos = [];
@@ -431,15 +534,22 @@ async function abrirFicha(receita) {
   estadoItens.hidden = false;
   tabelaItens.hidden = true;
   cartaoFicha.hidden = false;
+
+  tituloCusto.textContent = `Custo de produção: ${receita.nome}`;
+  estadoCusto.textContent = "Calculando custo...";
+  estadoCusto.hidden = false;
+  conteudoCusto.hidden = true;
+  cartaoCusto.hidden = false;
   cartaoFicha.scrollIntoView({ behavior: "smooth", block: "start" });
 
-  await Promise.all([carregarInsumos(), carregarItens()]);
+  await Promise.all([carregarInsumos(), carregarItens(), carregarCusto()]);
 }
 
 function fecharFicha() {
   receitaAberta = null;
   idItemEmEdicao = null;
   cartaoFicha.hidden = true;
+  cartaoCusto.hidden = true;
   limparMensagemFicha();
 }
 
@@ -464,7 +574,7 @@ async function removerDaReceita(item) {
     await removerItem(receitaAberta.idReceita, item.idItem);
     if (idItemEmEdicao === item.idItem) sairDaEdicaoItem();
     exibirMensagemFicha("Insumo removido da receita.", "success");
-    await Promise.all([carregarItens(), carregarLista()]);
+    await atualizarAposMudarItens();
   } catch (erro) {
     exibirMensagemFicha(erro.message, "error");
   }
@@ -494,7 +604,7 @@ formItem.addEventListener("submit", async (e) => {
 
     sairDaEdicaoItem();
     exibirMensagemFicha(resposta.message, "success");
-    await Promise.all([carregarItens(), carregarLista()]);
+    await atualizarAposMudarItens();
   } catch (erro) {
     exibirMensagemFicha(erro.message, "error");
   } finally {
@@ -508,6 +618,7 @@ btnCancelarItem.addEventListener("click", () => {
   limparMensagemFicha();
 });
 btnFecharFicha.addEventListener("click", fecharFicha);
+btnRecalcular.addEventListener("click", () => Promise.all([carregarCusto(), carregarLista()]));
 
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -530,7 +641,8 @@ form.addEventListener("submit", async (e) => {
 
     sairDaEdicao();
     exibirMensagem(resposta.message, "success");
-    await carregarLista();
+    // Se a receita editada é a da ficha aberta, o rendimento pode ter mudado: recalcula o custo.
+    await Promise.all([carregarLista(), editando ? carregarCusto() : null]);
   } catch (erro) {
     exibirMensagem(erro.message, "error");
   } finally {
