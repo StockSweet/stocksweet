@@ -182,6 +182,37 @@ A data e o usuário da movimentação vêm do servidor (relógio e token), não 
 
 Cada item volta como `{ idItem, idInsumo, nomeInsumo, unidadeMedida, quantidade, precoCompraAtual, valorItem }`. A `quantidade` é sempre expressa na **unidade de medida do próprio insumo** (um insumo em `kg` usa quilos, um em `litros` usa litros) e deve ser maior que zero (400 caso contrário; até 3 casas decimais). O `valorItem` é calculado a cada consulta (`quantidade × precoCompraAtual`, arredondado a 2 casas) e não é gravado no banco, então acompanha as entradas de estoque que mudam o `precoCompra`. Excluir uma receita apaga a ficha técnica junto; já um insumo usado em alguma receita não pode ser excluído (a chave estrangeira é `Restrict`).
 
+**Endpoints de custo** (RF04; mesma autenticação; Usuário e Gestor podem usar):
+
+| Método | Rota | Descrição |
+|---|---|---|
+| GET | `/api/receitas/{id}/custo` | Custo de produção da receita, com o custo e o percentual de cada item e a lista de alertas. 404 `{ message }` se a receita não existir |
+| GET | `/api/receitas/custos` | Resumo de todas as receitas, ordenado por nome: `{ idReceita, nome, custoTotal, custoPorUnidade, quantidadeItens, possuiAlertas }` |
+
+O custo de uma receita volta como:
+
+```json
+{
+  "idReceita": 1, "nomeReceita": "Bolo de cenoura", "rendimentoReceita": 12.0, "unidadeRendimento": "fatias",
+  "custoTotal": 7.05, "custoPorUnidade": 0.59, "calculadoEm": "2026-11-02T10:45:39-03:00",
+  "itens": [
+    { "idItem": 3, "idInsumo": 3, "nomeInsumo": "Farinha", "unidadeMedida": "kg", "quantidade": 0.5,
+      "precoCompraAtual": 5.00, "custoItem": 2.50, "percentualDoCusto": 35.46 }
+  ],
+  "alertas": [
+    { "tipo": "EstoqueInsuficiente", "mensagem": "...", "idInsumo": 5, "nomeInsumo": "Ovos", "unidadeMedida": "un", "quantidadeFaltante": 10.0 }
+  ]
+}
+```
+
+**Fórmula:** `custoItem = quantidade × precoCompra` do insumo; `custoTotal = Σ custoItem`; `custoPorUnidade = custoTotal ÷ rendimentoReceita` (por `unidadeRendimento`). Os cálculos usam `decimal` com os valores exatos e só o resultado é arredondado (2 casas): o `custoTotal` é a soma dos custos exatos, não a soma dos `custoItem` já arredondados, então pode diferir em centavos da soma visual das linhas. O `percentualDoCusto` também usa os valores exatos.
+
+**Sempre ao vivo:** o custo não é gravado em tabela nenhuma (não há migration nem job). Cada leitura recalcula tudo a partir do `precoCompra` **atual** dos insumos, e como `POST /api/movimentacoes/entrada` atualiza o `precoCompra` do insumo, qualquer entrada de estoque com preço novo já aparece no custo da receita na próxima consulta. A leitura é uma única consulta ao banco (a receita com seus itens e insumos; o resumo é uma consulta agregada), sem N+1.
+
+**Alertas** (`tipo`): `ReceitaSemItens` (a receita não tem insumos, então o custo 0 não é real), `PrecoZerado` (insumo com `precoCompra = 0`, que nunca teve entrada: o custo está subestimado) e `EstoqueInsuficiente` (o saldo do insumo é menor que a quantidade usada em **uma** receita; `quantidadeFaltante` diz quanto falta, na unidade do insumo). No resumo, `possuiAlertas` é `true` se houver qualquer um deles.
+
+Outras funcionalidades podem reaproveitar o cálculo (por exemplo, a precificação): `CustoService.CalcularCustoReceita(int idReceita)` devolve o mesmo DTO do endpoint (ou `null` se a receita não existir) e o serviço é registrado por injeção de dependência (`AddScoped`).
+
 ### Front-end (HTML, CSS e JavaScript)
 O front-end é estático (sem build/bundler) e consome a API via `fetch`. Basta servir a pasta `frontend/` em `http://localhost:5173` (porta já liberada no CORS do back-end):
 ```bash
@@ -197,7 +228,7 @@ A URL base da API é configurada em `frontend/js/config.js`.
 
 **Movimentação de estoque (dados fictícios):** `entrada_mercadorias.html` (US02) e `saida_mercadorias.html` (US03) trazem os formulários de entrada e saída de mercadorias. Ambos usam `frontend/js/estoqueService.js`, um serviço mock que simula a API (lista de insumos, `registrarEntradaSimulada` e `registrarSaidaSimulada`, com latência e validação de quantidade/valor maior que zero). Quando os endpoints existirem, é nesse arquivo que as funções passam a fazer `fetch` para a API. Essas telas ainda não têm link no menu do painel; são abertas direto pela URL.
 
-**Cadastro de receitas (API real):** `cadastro_receitas.html` (RF03) lista as receitas e tem o formulário de criar, editar e excluir. Diferente das telas acima, ela já chama a API de verdade: `frontend/js/receitaService.js` faz `fetch` em `/api/receitas` com o token Bearer da sessão (sem token ou com token vencido, volta pro login). O menu **Receitas** do painel leva para essa tela. O botão **Ficha técnica** de cada receita abre a lista dos insumos dela, com um formulário para adicionar insumo (o `<select>` vem de `GET /api/insumos` e mostra a unidade de medida), editar a quantidade e remover.
+**Cadastro de receitas (API real):** `cadastro_receitas.html` (RF03) lista as receitas e tem o formulário de criar, editar e excluir. Diferente das telas acima, ela já chama a API de verdade: `frontend/js/receitaService.js` faz `fetch` em `/api/receitas` com o token Bearer da sessão (sem token ou com token vencido, volta pro login). O menu **Receitas** do painel leva para essa tela. O botão **Ficha técnica** de cada receita abre a lista dos insumos dela, com um formulário para adicionar insumo (o `<select>` vem de `GET /api/insumos` e mostra a unidade de medida), editar a quantidade e remover. Ao abrir a ficha aparece também o **painel de custo de produção** da receita (custo total, custo por unidade, tabela com o custo e a porcentagem de cada item e os alertas), buscado em `GET /api/receitas/{id}/custo` e atualizado sempre que um item é adicionado, editado ou removido (há ainda o botão **Recalcular**, útil depois de uma entrada de estoque). A lista de receitas ganhou as colunas **Custo total** e **Custo por unidade** (de `GET /api/receitas/custos`), com um selo *Atenção* nas receitas com alertas.
 
 > Pra ver o painel sem subir o back-end, rode no console do navegador (na página de login) e abra `dashboard.html`:
 > ```js
@@ -221,11 +252,11 @@ Hoje as migrations cobrem `Usuario` (com o campo `Nivel`: Usuário/Gestor), `Ins
 ```
 stocksweet/
 ├── backend/StockSweet.Api/   # API em C# (.NET)
-│   ├── Controllers/          # AuthController, InsumosController, MovimentacoesController, ReceitasController, ItensReceitaController
-│   ├── DTOs/                 # AuthDto, EstoqueDto, ReceitaDto
+│   ├── Controllers/          # AuthController, InsumosController, MovimentacoesController, ReceitasController, ItensReceitaController, CustosController
+│   ├── DTOs/                 # AuthDto, EstoqueDto, ReceitaDto, CustoDto
 │   ├── banco/                # StockDbContext (EF Core)
 │   ├── entidades/            # Usuario, Insumo, MovimentacaoEstoque, Receita, ItemReceita (e enums)
-│   ├── services/             # JwtService, EmailValidacao
+│   ├── services/             # JwtService, EmailValidacao, EstoqueService, CustoService
 │   └── Migrations/
 ├── frontend/                 # Aplicação estática (HTML, CSS e JavaScript)
 │   ├── css/                  # style.css (login e formulários) e dashboard.css (painel)
