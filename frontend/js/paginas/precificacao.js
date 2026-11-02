@@ -578,9 +578,11 @@ async function carregarTela() {
     ui.conteudo.hidden = false;
     desenharResumo();
     desenharLista();
+    return true;
   } catch (erro) {
     ui.carregando.hidden = true;
     ui.avisos.replaceChildren(banner({ tom: "erro", titulo: "Não foi possível carregar a precificação", mensagens: erro.message, assertivo: true, acoes: [{ rotulo: "Tentar de novo", icone: "refresh", onClick: carregarTela }] }));
+    return false;
   }
 }
 
@@ -617,7 +619,7 @@ function mostrarTela() {
       { class: "view" },
       cabecalho({
         subtitulo: "Preço sugerido de cada receita a partir do custo e da margem.",
-        acoes: [h("button", { type: "button", class: "btn btn--ghost", onclick: () => carregarTela().then(() => layout.avisar("Preços atualizados.", { tom: "ok" })) }, icon("refresh", 16), "Atualizar")],
+        acoes: [h("button", { type: "button", class: "btn btn--ghost", onclick: () => carregarTela().then((ok) => ok && layout.avisar("Preços atualizados.", { tom: "ok" })) }, icon("refresh", 16), "Atualizar")],
       }),
       ui.avisos,
       ui.carregando,
