@@ -4,6 +4,7 @@ import { insumoPorId, intervaloDoPeriodo, iniciarBase, statusDe } from "./dashbo
 import { h } from "./dashboard/dom.js";
 import { qtd, timeAgo } from "./dashboard/format.js";
 import { toast } from "./dashboard/ui.js";
+import { criarSidebar } from "./sidebar.js";
 import * as shell from "./dashboard/shell.js";
 import * as dialogos from "./dashboard/dialogs.js";
 import * as kpis from "./dashboard/widgets/kpis.js";
@@ -22,6 +23,9 @@ if (sessao) iniciar(sessao);
 else irParaLogin();
 
 function iniciar(sessao) {
+  // Barra lateral única (js/sidebar.js), montada antes do resto do painel.
+  document.getElementById("sidebar").replaceWith(criarSidebar({ ativo: "painel" }));
+
   const db = createDb();
   iniciarBase(db);
 
