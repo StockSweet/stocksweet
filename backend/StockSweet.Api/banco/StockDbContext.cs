@@ -17,6 +17,7 @@ namespace StockSweet.Api.banco
         public DbSet<Usuario> Usuario {get;set;}
         public DbSet<Insumo> Insumo { get; set; }
         public DbSet<MovimentacaoEstoque> MovimentacaoEstoque { get; set; }
+        public DbSet<Receita> Receita { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -48,6 +49,10 @@ namespace StockSweet.Api.banco
 
                 mov.HasIndex(m => new { m.IdInsumo, m.Data });
             });
+
+            modelBuilder.Entity<Receita>()
+                .HasIndex(r => r.Nome)
+                .IsUnique();
         }
     }
 }
