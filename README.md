@@ -102,7 +102,7 @@ Principais entidades do sistema:
 - **Gestor** — herda de Usuario; possui `funcionarios: int` e métodos de cálculo/consulta
 - **Fornecedor** — idFornecedor, nome, telefone, email, endereço, observação
 - **Insumos** — idInsumo, nome, unidadeMedida, quantidadeEstoque, precoCompra, estoqueMinimo
-- **Receita** — idReceita, nome, descricao, rendimentoReceita, dataCadastro
+- **Receita** — idReceita, nome (único), descricao, rendimentoReceita, unidadeRendimento, dataCadastro
 - **ItemReceita** — idItem, quantidade, valorItem (associa Insumos a uma Receita)
 - **MovimentacaoEstoque** — idMovimentacao, tipo (ENTRADA/SAIDA), data, quantidade, valorUnitario, observacao
 - **Precificacao** — idPrecificacao, margemLucro, precoSugerido, custoProducao, dataCalculo
@@ -158,6 +158,18 @@ dotnet run
 
 A data e o usuário da movimentação vêm do servidor (relógio e token), não do corpo da requisição. Nas saídas, o `valorUnitario` gravado é o `precoCompra` do insumo no momento da baixa.
 
+**Endpoints de receitas** (RF03; exigem `Authorization: Bearer <token>`; Usuário e Gestor podem usar):
+
+| Método | Rota | Descrição |
+|---|---|---|
+| GET | `/api/receitas` | Lista as receitas, ordenadas por nome |
+| GET | `/api/receitas/{id}` | Detalha uma receita. 404 se não existir |
+| POST | `/api/receitas` | Cadastra: `{ nome, descricao?, rendimentoReceita, unidadeRendimento }`. Retorna 201 com a receita criada |
+| PUT | `/api/receitas/{id}` | Atualiza os mesmos campos do POST. 404 se não existir |
+| DELETE | `/api/receitas/{id}` | Exclui a receita (204). 404 se não existir |
+
+`nome` (até 150 caracteres) é obrigatório e único: nome repetido retorna 409 (a comparação do MySQL ignora maiúsculas/minúsculas e acentos). `rendimentoReceita` deve ser maior que zero e `unidadeRendimento` (até 20 caracteres, ex.: `porções`, `fatias`, `kg`) é obrigatória. Campos inválidos retornam 400; a `dataCadastro` vem do servidor.
+
 ### Front-end (HTML, CSS e JavaScript)
 O front-end é estático (sem build/bundler) e consome a API via `fetch`. Basta servir a pasta `frontend/` em `http://localhost:5173` (porta já liberada no CORS do back-end):
 ```bash
@@ -173,6 +185,8 @@ A URL base da API é configurada em `frontend/js/config.js`.
 
 **Movimentação de estoque (dados fictícios):** `entrada_mercadorias.html` (US02) e `saida_mercadorias.html` (US03) trazem os formulários de entrada e saída de mercadorias. Ambos usam `frontend/js/estoqueService.js`, um serviço mock que simula a API (lista de insumos, `registrarEntradaSimulada` e `registrarSaidaSimulada`, com latência e validação de quantidade/valor maior que zero). Quando os endpoints existirem, é nesse arquivo que as funções passam a fazer `fetch` para a API. Essas telas ainda não têm link no menu do painel; são abertas direto pela URL.
 
+**Cadastro de receitas (API real):** `cadastro_receitas.html` (RF03) lista as receitas e tem o formulário de criar, editar e excluir. Diferente das telas acima, ela já chama a API de verdade: `frontend/js/receitaService.js` faz `fetch` em `/api/receitas` com o token Bearer da sessão (sem token ou com token vencido, volta pro login). O menu **Receitas** do painel leva para essa tela.
+
 > Pra ver o painel sem subir o back-end, rode no console do navegador (na página de login) e abra `dashboard.html`:
 > ```js
 > sessionStorage.setItem("stocksweet.token", "x.e30.x");
@@ -186,7 +200,7 @@ O schema é criado pelas migrations do EF Core (`backend/StockSweet.Api/Migratio
 2. Configure a connection string via `dotnet user-secrets` (veja [Back-end](#back-end-c--net)), nunca em `appsettings.json`;
 3. Rode `dotnet ef database update` em `backend/StockSweet.Api`.
 
-Hoje as migrations cobrem apenas `Usuario` (com o campo `Nivel`: Usuário/Gestor). As demais entidades do [Modelo de dados](#-modelo-de-dados) entram nas próximas sprints.
+Hoje as migrations cobrem `Usuario` (com o campo `Nivel`: Usuário/Gestor), `Insumo`, `MovimentacaoEstoque` e `Receita` (nome único). As demais entidades do [Modelo de dados](#-modelo-de-dados) (Fornecedor, ItemReceita, Precificacao) entram nas próximas sprints.
 
 ---
 
@@ -195,21 +209,22 @@ Hoje as migrations cobrem apenas `Usuario` (com o campo `Nivel`: Usuário/Gestor
 ```
 stocksweet/
 ├── backend/StockSweet.Api/   # API em C# (.NET)
-│   ├── Controllers/          # AuthController (login e cadastro)
-│   ├── DTOs/AuthDto/
+│   ├── Controllers/          # AuthController, InsumosController, MovimentacoesController, ReceitasController
+│   ├── DTOs/                 # AuthDto, EstoqueDto, ReceitaDto
 │   ├── banco/                # StockDbContext (EF Core)
-│   ├── entidades/            # Usuario, NivelUsuario
+│   ├── entidades/            # Usuario, Insumo, MovimentacaoEstoque, Receita (e enums)
 │   ├── services/             # JwtService, EmailValidacao
 │   └── Migrations/
 ├── frontend/                 # Aplicação estática (HTML, CSS e JavaScript)
 │   ├── css/                  # style.css (login e formulários) e dashboard.css (painel)
-│   ├── js/                   # config.js, login.js, session.js, estoqueService.js (mock),
+│   ├── js/                   # config.js, login.js, session.js, estoqueService.js (mock), receitaService.js,
 │   │                         # dashboard.js e dashboard/ (módulos do painel)
 │   ├── assets/
 │   ├── index.html            # login
 │   ├── dashboard.html        # painel pós-login
 │   ├── entrada_mercadorias.html
-│   └── saida_mercadorias.html
+│   ├── saida_mercadorias.html
+│   └── cadastro_receitas.html
 └── docs/                     # Declaração de Visão, diagramas, relatório técnico
 ```
 
