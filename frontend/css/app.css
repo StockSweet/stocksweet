@@ -78,6 +78,12 @@ a.btn {
   color: var(--ink);
 }
 
+.crumbs__static {
+  padding: 4px 6px;
+  color: var(--ink-3);
+  font-weight: 500;
+}
+
 .crumbs__sep {
   color: var(--ink-3);
   opacity: 0.7;
@@ -1429,4 +1435,365 @@ a.btn {
   .is-menu-open .sidebar {
     box-shadow: var(--shadow-pop);
   }
+}
+
+/* ---------- entrada e saída de mercadorias ---------- */
+
+.estoque-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .estoque-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.estoque-form {
+  display: grid;
+  gap: 18px;
+}
+
+.btn--block {
+  width: 100%;
+}
+
+.status--entrada {
+  background: color-mix(in srgb, var(--series-1) 14%, transparent);
+  color: var(--series-1);
+}
+
+:root[data-theme="dark"] .status--entrada {
+  color: #f0a3bd;
+}
+
+.status--saida {
+  background: var(--warn-bg);
+  color: var(--warn-ink);
+}
+
+.insumo-info {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+}
+
+.insumo-info__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.insumo-info__saldo {
+  display: grid;
+}
+
+.insumo-info__rotulo {
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.insumo-info__saldo strong {
+  color: var(--ink);
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.insumo-info__fatos {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.insumo-info__fatos dt {
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.insumo-info__fatos dd {
+  margin: 0;
+  color: var(--ink);
+  font-size: 13.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 480px) {
+  .insumo-info__fatos {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+.motivos {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.motivos legend {
+  padding: 0;
+  margin-bottom: 8px;
+}
+
+.motivos__grade {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (max-width: 420px) {
+  .motivos__grade {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.motivo {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  cursor: pointer;
+  transition: border-color 0.15s var(--ease-out), background 0.15s var(--ease-out), box-shadow 0.15s var(--ease-out);
+}
+
+.motivo:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+}
+
+.motivo input {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.motivo::before {
+  content: "";
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--axis);
+  border-radius: 50%;
+  background: var(--surface);
+  transition: border-color 0.15s var(--ease-out), box-shadow 0.15s var(--ease-out);
+}
+
+.motivo:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.motivo:has(input:checked)::before {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 3px var(--surface), inset 0 0 0 10px var(--accent);
+}
+
+.motivo:has(input:focus-visible) {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.motivo__txt {
+  display: grid;
+  min-width: 0;
+  line-height: 1.3;
+}
+
+.motivo__txt strong {
+  color: var(--ink);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.motivo__txt small {
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.sum {
+  gap: 8px;
+}
+
+.sum__big {
+  font-size: 20px;
+  letter-spacing: -0.02em;
+}
+
+.preview__line .is-neg {
+  color: var(--crit-ink);
+}
+
+.note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: -6px 0 0;
+  color: var(--ink-3);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.note:empty {
+  display: none;
+}
+
+.note .icon {
+  margin-top: 1px;
+}
+
+.note--crit {
+  color: var(--crit-ink);
+  font-weight: 600;
+}
+
+.note--warn {
+  color: var(--warn-ink);
+  font-weight: 600;
+}
+
+.mov-tools {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mov-wrap {
+  min-height: 160px;
+}
+
+.mov-erro {
+  padding: 16px 22px 18px;
+}
+
+.mov-lista {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mov {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 13px 22px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.mov:last-child {
+  border-bottom: 0;
+}
+
+.mov__icone {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+}
+
+.mov__icone--entrada {
+  background: color-mix(in srgb, var(--series-1) 14%, transparent);
+  color: var(--series-1);
+}
+
+:root[data-theme="dark"] .mov__icone--entrada {
+  color: #f0a3bd;
+}
+
+.mov__icone--saida {
+  background: var(--warn-bg);
+  color: var(--warn-ink);
+}
+
+.mov__corpo {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.mov__linha {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mov__nome {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mov__qtd {
+  flex: none;
+  color: var(--ink);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.mov__linha--meta {
+  align-items: center;
+  color: var(--ink-3);
+  font-size: 12.5px;
+}
+
+.mov__meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  min-width: 0;
+}
+
+.mov__valor {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.mov__obs {
+  overflow: hidden;
+  color: var(--ink-3);
+  font-size: 12.5px;
+  font-style: italic;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 560px) {
+  .mov {
+    padding: 12px 16px;
+  }
+
+  .mov__linha--meta {
+    align-items: flex-start;
+  }
+}
+
+.fld {
+  align-content: start;
 }
