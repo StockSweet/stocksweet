@@ -2,9 +2,8 @@
 // RNF01: só o Gestor usa estes endpoints (a API recusa os demais com 403). A tela que usa
 // estas funções fica em js/paginas/precificacao.js.
 import { API_BASE_URL } from "./config.js";
-import { clearSession, getSession } from "./session.js";
+import { getSession, sessaoInvalida } from "./session.js";
 
-const LOGIN_URL = "index.html";
 const URL_PRECIFICACAO = `${API_BASE_URL}/precificacao`;
 const URL_RECEITAS = `${API_BASE_URL}/receitas`;
 
@@ -26,12 +25,9 @@ function extrairMensagem(corpo, padrao) {
 }
 
 async function requisitar(url, opcoes = {}) {
-  // Sem sessão válida não há token pra mandar: volta pro login.
+  // Sem sessão válida não há token pra mandar: a tela mostra o aviso de sessão inválida.
   const sessao = getSession();
-  if (!sessao) {
-    window.location.replace(LOGIN_URL);
-    throw new Error("Sessão expirada. Faça login novamente.");
-  }
+  if (!sessao) throw sessaoInvalida();
 
   const cabecalhos = { Authorization: `Bearer ${sessao.token}` };
   if (opcoes.body) cabecalhos["Content-Type"] = "application/json";
@@ -43,12 +39,8 @@ async function requisitar(url, opcoes = {}) {
     throw new Error("Não foi possível conectar ao servidor. Verifique se a API está no ar.");
   }
 
-  // Token vencido ou inválido: encerra a sessão local e pede login de novo.
-  if (resposta.status === 401) {
-    clearSession();
-    window.location.replace(LOGIN_URL);
-    throw new Error("Sessão expirada. Faça login novamente.");
-  }
+  // Token vencido ou inválido: não redireciona em silêncio; a tela explica e oferece "Entrar novamente".
+  if (resposta.status === 401) throw sessaoInvalida();
 
   if (resposta.status === 403) {
     throw new Error("Acesso restrito ao Gestor.");

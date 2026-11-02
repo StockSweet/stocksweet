@@ -1797,3 +1797,7 @@ a.btn {
 .fld {
   align-content: start;
 }
+
+.empty__title:focus {
+  outline: none;
+}

@@ -1,9 +1,8 @@
 // Estoque: chamadas à API real (api/insumos e api/movimentacoes).
 // As telas que usam estas funções ficam em js/paginas/estoque.js (entrada e saída de mercadorias).
 import { API_BASE_URL } from "./config.js";
-import { clearSession, getSession } from "./session.js";
+import { getSession, sessaoInvalida } from "./session.js";
 
-const LOGIN_URL = "index.html";
 const URL_INSUMOS = `${API_BASE_URL}/insumos`;
 const URL_MOVIMENTACOES = `${API_BASE_URL}/movimentacoes`;
 
@@ -33,12 +32,9 @@ function extrairMensagem(corpo, padrao) {
 }
 
 async function requisitar(url, opcoes = {}) {
-  // Sem sessão válida não há token pra mandar: volta pro login.
+  // Sem sessão válida não há token pra mandar: a tela mostra o aviso de sessão inválida.
   const sessao = getSession();
-  if (!sessao) {
-    window.location.replace(LOGIN_URL);
-    throw new Error("Sessão expirada. Faça login novamente.");
-  }
+  if (!sessao) throw sessaoInvalida();
 
   const cabecalhos = { Authorization: `Bearer ${sessao.token}` };
   if (opcoes.body) cabecalhos["Content-Type"] = "application/json";
@@ -50,12 +46,8 @@ async function requisitar(url, opcoes = {}) {
     throw new Error("Não foi possível conectar ao servidor. Verifique se a API está no ar.");
   }
 
-  // Token vencido ou inválido: encerra a sessão local e pede login de novo.
-  if (resposta.status === 401) {
-    clearSession();
-    window.location.replace(LOGIN_URL);
-    throw new Error("Sessão expirada. Faça login novamente.");
-  }
+  // Token vencido ou inválido: não redireciona em silêncio; a tela explica e oferece "Entrar novamente".
+  if (resposta.status === 401) throw sessaoInvalida();
 
   const corpo = resposta.status === 204 ? null : await resposta.json().catch(() => null);
 

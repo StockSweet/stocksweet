@@ -8,10 +8,11 @@
 //
 // Sem sessão válida, redireciona ao login e devolve null.
 
-import { clearSession, ehGestor, getSession } from "./session.js";
+import { EVENTO_SESSAO_INVALIDA, clearSession, ehGestor, getSession, irParaLogin } from "./session.js";
 import { h, icon } from "./dashboard/dom.js";
 import { initials } from "./dashboard/format.js";
 import { criarPopover, toast } from "./dashboard/ui.js";
+import { estadoSessaoInvalida, fecharTodosDialogos } from "./componentes.js";
 
 const LOGIN_URL = "index.html";
 const TEMA_KEY = "stocksweet.tema";
@@ -89,7 +90,8 @@ function criarSidebar(ativo, gestor, aoFechar) {
 export function montarLayout({ ativo } = {}) {
   const sessao = getSession();
   if (!sessao) {
-    window.location.replace(LOGIN_URL);
+    // Sem token nenhum não há o que explicar: vai ao login e volta para esta página depois.
+    irParaLogin();
     return null;
   }
 
@@ -226,6 +228,22 @@ export function montarLayout({ ativo } = {}) {
   });
   atualizarFocoDoMenu();
 
+  /* ---------- sessão inválida (401 em qualquer serviço) ---------- */
+  let sessaoInvalida = false;
+
+  // Um único aviso para todas as telas: explica o que houve, sem redirecionar sozinho.
+  window.addEventListener(EVENTO_SESSAO_INVALIDA, () => {
+    fecharTodosDialogos();
+    definirMenu(false);
+    sessaoInvalida = true;
+    // várias chamadas podem falhar juntas: o aviso só é montado uma vez
+    if (conteudo && !conteudo.querySelector("[data-sessao-invalida]")) {
+      const { el, titulo } = estadoSessaoInvalida();
+      conteudo.replaceChildren(el);
+      titulo.focus({ preventScroll: true });
+    }
+  });
+
   /* ---------- API da página ---------- */
 
   // trilha: [{ rotulo, href? }]; o último item é a página atual.
@@ -261,6 +279,7 @@ export function montarLayout({ ativo } = {}) {
     conteudo,
     definirPagina,
     focarConteudo,
-    avisar: (mensagem, opcoes) => toast(mensagem, opcoes),
+    // com a sessão inválida os avisos de erro dos serviços não fazem mais sentido
+    avisar: (mensagem, opcoes) => !sessaoInvalida && toast(mensagem, opcoes),
   };
 }

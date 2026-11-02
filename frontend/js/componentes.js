@@ -4,6 +4,7 @@
 
 import { h, icon } from "./dashboard/dom.js";
 import { brl } from "./dashboard/format.js";
+import { irParaLogin } from "./session.js";
 
 const FOCUSAVEL = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 const DURACAO_SAIDA = 240;
@@ -114,6 +115,11 @@ export function abrirDialogo({ tipo = "modal", titulo, subtitulo, corpo, rodape,
   alvo?.focus({ preventScroll: true });
 
   return { fechar, raiz, corpoEl };
+}
+
+// Fecha qualquer diálogo ou painel aberto (ex.: quando a sessão deixa de valer no meio de um formulário).
+export function fecharTodosDialogos() {
+  for (const dialogo of [...pilha].reverse()) dialogo.fechar();
 }
 
 // Pergunta de confirmação em diálogo estilizado. Resolve true/false.
@@ -449,4 +455,31 @@ export function criarCombo(aoEscolher, { detalhe = (i) => `${brl(i.precoCompra)}
       fechar();
     },
   };
+}
+
+/* ---------------------------------------------------------
+   Sessão inválida: estado dentro do layout (com menu e Voltar)
+--------------------------------------------------------- */
+
+export function estadoSessaoInvalida() {
+  const titulo = h("h1", { class: "empty__title", tabindex: "-1" }, "Sua sessão expirou ou não é válida");
+  const el = h(
+    "div",
+    { class: "view", "data-sessao-invalida": "" },
+    h("a", { class: "back-link", href: "dashboard.html" }, icon("arrow-left", 16), "Voltar ao painel"),
+    h(
+      "div",
+      { class: "empty empty--card", role: "alert" },
+      h("div", { class: "empty__art" }, h("span", { class: "empty__badge" }, icon("lock", 30))),
+      titulo,
+      h("p", { class: "empty__text" }, "Por segurança, o StockSweet precisa que você entre de novo para continuar. Depois do login você volta para esta mesma tela."),
+      h(
+        "div",
+        { class: "page-head__actions", style: { justifyContent: "center" } },
+        h("button", { type: "button", class: "btn btn--primary", "data-autofocus": "", onclick: () => irParaLogin({ limpar: true }) }, icon("logout", 16), "Entrar novamente"),
+        h("a", { class: "btn btn--ghost", href: "dashboard.html" }, icon("arrow-left", 16), "Voltar ao painel"),
+      ),
+    ),
+  );
+  return { el, titulo };
 }
