@@ -57,6 +57,34 @@ namespace StockSweet.Api.Migrations
                     b.ToTable("Insumo");
                 });
 
+            modelBuilder.Entity("StockSweet.Api.entidades.ItemReceita", b =>
+                {
+                    b.Property<int>("IdItem")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("IdItem"));
+
+                    b.Property<int>("IdInsumo")
+                        .HasColumnType("int");
+
+                    b.Property<int>("IdReceita")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Quantidade")
+                        .HasPrecision(12, 3)
+                        .HasColumnType("decimal(12,3)");
+
+                    b.HasKey("IdItem");
+
+                    b.HasIndex("IdInsumo");
+
+                    b.HasIndex("IdReceita", "IdInsumo")
+                        .IsUnique();
+
+                    b.ToTable("ItemReceita");
+                });
+
             modelBuilder.Entity("StockSweet.Api.entidades.MovimentacaoEstoque", b =>
                 {
                     b.Property<int>("IdMovimentacao")
@@ -178,6 +206,25 @@ namespace StockSweet.Api.Migrations
                     b.ToTable("Usuario");
                 });
 
+            modelBuilder.Entity("StockSweet.Api.entidades.ItemReceita", b =>
+                {
+                    b.HasOne("StockSweet.Api.entidades.Insumo", "Insumo")
+                        .WithMany()
+                        .HasForeignKey("IdInsumo")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("StockSweet.Api.entidades.Receita", "Receita")
+                        .WithMany("Itens")
+                        .HasForeignKey("IdReceita")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Insumo");
+
+                    b.Navigation("Receita");
+                });
+
             modelBuilder.Entity("StockSweet.Api.entidades.MovimentacaoEstoque", b =>
                 {
                     b.HasOne("StockSweet.Api.entidades.Insumo", "Insumo")
@@ -195,6 +242,11 @@ namespace StockSweet.Api.Migrations
                     b.Navigation("Insumo");
 
                     b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("StockSweet.Api.entidades.Receita", b =>
+                {
+                    b.Navigation("Itens");
                 });
 #pragma warning restore 612, 618
         }

@@ -13,5 +13,7 @@ namespace StockSweet.Api.DTOs.ReceitaDto
         public required string UnidadeRendimento { get; set; }
 
         public DateTime DataCadastro { get; set; }
+
+        public int QuantidadeItens { get; set; }
     }
 }
