@@ -13,33 +13,12 @@ import { h, icon } from "./dashboard/dom.js";
 import { initials } from "./dashboard/format.js";
 import { criarPopover, toast } from "./dashboard/ui.js";
 import { estadoSessaoInvalida, fecharTodosDialogos } from "./componentes.js";
+import { EVENTO_FECHAR_MENU, criarSidebar } from "./sidebar.js";
 
 const LOGIN_URL = "index.html";
 const TEMA_KEY = "stocksweet.tema";
 const MARCA = "StockSweet";
 const MENU_COMPACTO = "(max-width: 1024px)";
-
-// Itens do menu. "soGestor" segue a regra do session.js (RNF01).
-const MENU = [
-  {
-    grupo: "Visão geral",
-    itens: [{ id: "painel", rotulo: "Painel", href: "dashboard.html", icone: "dashboard" }],
-  },
-  {
-    grupo: "Produção",
-    itens: [
-      { id: "receitas", rotulo: "Receitas", href: "cadastro_receitas.html", icone: "recipe" },
-      { id: "precificacao", rotulo: "Precificação", href: "precificacao.html", icone: "tag", soGestor: true },
-    ],
-  },
-  {
-    grupo: "Estoque",
-    itens: [
-      { id: "entrada", rotulo: "Entrada de mercadorias", href: "entrada_mercadorias.html", icone: "arrow-in" },
-      { id: "saida", rotulo: "Saída de mercadorias", href: "saida_mercadorias.html", icone: "arrow-out" },
-    ],
-  },
-];
 
 function aplicarTema(tema) {
   document.documentElement.dataset.theme = tema;
@@ -48,43 +27,6 @@ function aplicarTema(tema) {
   } catch {
     // sem localStorage: o tema vale só até recarregar
   }
-}
-
-function criarSidebar(ativo, gestor, aoFechar) {
-  const grupos = MENU.map((grupo) => ({ ...grupo, itens: grupo.itens.filter((item) => gestor || !item.soGestor) })).filter(
-    (grupo) => grupo.itens.length,
-  );
-
-  return h(
-    "aside",
-    { class: "sidebar", id: "sidebar", "aria-label": "Navegação principal" },
-    h(
-      "div",
-      { class: "sidebar__brand" },
-      h("img", { class: "sidebar__mark", src: "assets/favicon.svg", alt: "", width: 38, height: 38 }),
-      h("span", { class: "sidebar__word" }, "Stock", h("em", null, "Sweet")),
-      h("button", { type: "button", class: "icon-btn sidebar__close", id: "sidebarClose", "aria-label": "Fechar menu", onclick: aoFechar }, icon("x")),
-    ),
-    h(
-      "nav",
-      { class: "sidebar__nav", "aria-label": "Seções do sistema" },
-      ...grupos.flatMap((grupo) => [
-        h("p", { class: "sidebar__group" }, grupo.grupo),
-        ...grupo.itens.map((item) =>
-          h(
-            "a",
-            {
-              class: `nav-item${item.id === ativo ? " is-active" : ""}`,
-              href: item.href,
-              "aria-current": item.id === ativo ? "page" : null,
-            },
-            icon(item.icone),
-            h("span", null, item.rotulo),
-          ),
-        ),
-      ]),
-    ),
-  );
 }
 
 export function montarLayout({ ativo } = {}) {
@@ -121,7 +63,11 @@ export function montarLayout({ ativo } = {}) {
     else if (compacto.matches) menuBtn.focus({ preventScroll: true });
   }
 
-  sidebar = criarSidebar(ativo, gestor, () => definirMenu(false));
+  // A barra lateral é a mesma em todas as páginas (js/sidebar.js); só muda o item ativo.
+  document.body.dataset.role = gestor ? "gestor" : "usuario";
+  sidebar = criarSidebar({ ativo });
+  sidebar.querySelector("#sidebarClose").addEventListener("click", () => definirMenu(false));
+  document.addEventListener(EVENTO_FECHAR_MENU, () => definirMenu(false));
 
   /* ---------- topbar ---------- */
   menuBtn = h(
