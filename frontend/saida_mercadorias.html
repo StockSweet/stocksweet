@@ -102,9 +102,45 @@
       color: #721c24; 
       border: 1px solid #f5c6cb;
     }
+    /* Navegação entre as telas (mesmos destinos do menu lateral das telas novas) */
+    .menu-interno {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px 18px;
+      max-width: 600px;
+      margin: 24px auto -24px;
+      padding: 0 4px;
+      font-size: 0.9rem;
+    }
+
+    .menu-interno a {
+      color: var(--wine, #723c49);
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .menu-interno a:hover,
+    .menu-interno a:focus-visible {
+      text-decoration: underline;
+    }
+
+    .menu-interno a[aria-current="page"] {
+      color: var(--text, #6d5a52);
+      text-decoration: none;
+    }
   </style>
 </head>
 <body>
+
+  <!-- NAVEGAÇÃO ENTRE AS TELAS -->
+  <nav class="menu-interno" aria-label="Navegação entre as telas">
+    <a href="dashboard.html">&larr; Voltar ao painel</a>
+    <a href="cadastro_receitas.html">Receitas</a>
+    <a href="entrada_mercadorias.html">Entrada de mercadorias</a>
+    <a href="saida_mercadorias.html" aria-current="page">Saída de mercadorias</a>
+  </nav>
+
 
   <div class="container-form">
     <h2>Registro de Saída de Mercadorias</h2>
