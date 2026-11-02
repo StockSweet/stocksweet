@@ -1,9 +1,10 @@
-import { clearSession, ehGestor, getSession } from "./session.js";
+import { clearSession, ehGestor, getSession, irParaLogin } from "./session.js";
 import { createDb, PERIODOS } from "./dashboard/mock-data.js";
 import { insumoPorId, intervaloDoPeriodo, iniciarBase, statusDe } from "./dashboard/analytics.js";
 import { h } from "./dashboard/dom.js";
 import { qtd, timeAgo } from "./dashboard/format.js";
 import { toast } from "./dashboard/ui.js";
+import { criarSidebar } from "./sidebar.js";
 import * as shell from "./dashboard/shell.js";
 import * as dialogos from "./dashboard/dialogs.js";
 import * as kpis from "./dashboard/widgets/kpis.js";
@@ -19,9 +20,12 @@ const ORDEM_RENDER = ["shell", "kpis", "mov", "alertas", "categorias", "receitas
 
 const sessao = getSession();
 if (sessao) iniciar(sessao);
-else window.location.replace(LOGIN_URL);
+else irParaLogin();
 
 function iniciar(sessao) {
+  // Barra lateral única (js/sidebar.js), montada antes do resto do painel.
+  document.getElementById("sidebar").replaceWith(criarSidebar({ ativo: "painel" }));
+
   const db = createDb();
   iniciarBase(db);
 

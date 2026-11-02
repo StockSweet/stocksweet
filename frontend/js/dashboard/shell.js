@@ -1,11 +1,11 @@
 // Estrutura da página: tema, menu lateral, busca, notificações, menu do usuário e cabeçalho.
 
 import { $, $$, h, icon } from "./dom.js";
-import { medidor } from "./charts.js";
 import { badgeStatus } from "./components.js";
-import { alertasDe, buscar, categoriaPorId, notificacoes, saudeEstoque, statusDe } from "./analytics.js";
+import { alertasDe, buscar, categoriaPorId, notificacoes, statusDe } from "./analytics.js";
 import { dLong, initials, qtd, saudacao, timeAgo } from "./format.js";
-import { criarPopover, fecharPopovers, toast } from "./ui.js";
+import { criarPopover, fecharPopovers } from "./ui.js";
+import { EVENTO_FECHAR_MENU } from "../sidebar.js";
 
 const TEMA_KEY = "stocksweet.tema";
 
@@ -35,21 +35,30 @@ export function montar(ctx) {
   /* ---------- menu lateral (celular/tablet) ---------- */
   const appEl = $("#app");
   const menuBtn = $("#menuBtn");
+  const sidebarEl = $("#sidebar");
+  const compacto = window.matchMedia("(max-width: 1024px)");
+  // Fechado no celular/tablet, o menu sai da ordem de tabulação.
+  const sincronizarFoco = () => sidebarEl.toggleAttribute("inert", compacto.matches && !appEl.classList.contains("is-menu-open"));
   const setMenu = (aberto) => {
+    const mudou = appEl.classList.contains("is-menu-open") !== aberto;
     appEl.classList.toggle("is-menu-open", aberto);
     menuBtn.setAttribute("aria-expanded", String(aberto));
     document.body.classList.toggle("is-locked", aberto);
+    sincronizarFoco();
+    if (mudou && aberto) $("#sidebarClose").focus({ preventScroll: true });
+    else if (mudou && compacto.matches) menuBtn.focus({ preventScroll: true });
   };
+  compacto.addEventListener("change", () => {
+    if (!compacto.matches) setMenu(false);
+    sincronizarFoco();
+  });
+  sincronizarFoco();
   menuBtn.addEventListener("click", () => setMenu(!appEl.classList.contains("is-menu-open")));
   $("#sidebarClose").addEventListener("click", () => setMenu(false));
   $("#sidebarBackdrop").addEventListener("click", () => setMenu(false));
 
-  $$("[data-soon]").forEach((el) =>
-    el.addEventListener("click", () => {
-      setMenu(false);
-      toast(`${el.dataset.soon} ainda não está disponível — por enquanto o Painel é o único módulo.`, { tom: "info" });
-    }),
-  );
+  // "Em breve" (js/sidebar.js) pede para fechar o menu recolhível
+  document.addEventListener(EVENTO_FECHAR_MENU, () => setMenu(false));
 
   /* ---------- cabeçalho da página ---------- */
   const hoje = dLong(new Date());
@@ -123,17 +132,6 @@ export function montar(ctx) {
           ),
         ),
       ),
-    );
-  }
-
-  /* ---------- saúde do estoque (rodapé do menu) ---------- */
-  const saudeEl = $("#sideHealth");
-  function renderSaude() {
-    const { emDia, total, ratio } = saudeEstoque(ctx.db);
-    saudeEl.replaceChildren(
-      h("div", { class: "health__head" }, icon("heart", 16), h("span", null, "Saúde do estoque"), h("strong", null, `${Math.round(ratio * 100)}%`)),
-      medidor({ razao: ratio, tom: ratio >= 0.85 ? "ok" : ratio >= 0.65 ? "baixo" : "critico" }),
-      h("small", null, `${emDia} de ${total} insumos acima do mínimo`),
     );
   }
 
@@ -293,7 +291,6 @@ export function montar(ctx) {
       b.setAttribute("aria-pressed", String(ativo));
     });
     renderNotificacoes();
-    renderSaude();
     renderResumo();
   }
 
