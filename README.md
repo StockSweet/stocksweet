@@ -292,7 +292,21 @@ A URL base da API é configurada em `frontend/js/config.js`.
 > Isso só libera a tela (a checagem do front é conveniência de UX); qualquer chamada real à API continua exigindo um JWT válido.
 
 ### Banco de dados
-O schema é criado pelas migrations do EF Core (`backend/StockSweet.Api/Migrations`), então não há script SQL manual:
+**Banco compartilhado (recomendado para o time):** o projeto usa um MySQL gratuito no [Aiven](https://aiven.io) (serviço `stocksweet-free`, plano Free, MySQL 8.4), então o que um dev altera os outros veem. Cada dev tem o **próprio usuário** (`pietro`, `michael`, `alice`, `matheus`, `osvaldo`); host, porta e senha são passados em privado pelo Pietro e **nunca** vão pro repositório:
+
+```bash
+cd backend/StockSweet.Api
+dotnet user-secrets set "ConnectionStrings:MySql" "server=HOST;port=PORTA;database=defaultdb;user=SEU_USUARIO;password=SUA_SENHA;SslMode=Required;"
+dotnet ef database update   # só aplica o que ainda não foi aplicado
+```
+
+Atenção ao usar o banco compartilhado:
+- O plano Free **desliga sozinho quando fica inativo**: se a API não conectar, ligue o serviço no console do Aiven (Overview → Power on) e espere ficar *Running*.
+- Rode `dotnet ef database update` depois de cada `git pull` que traga migration nova, e **combine no grupo antes de gerar migration nova**, pra duas pessoas não criarem migrations conflitantes no mesmo banco.
+- Não apague dados dos outros: é um banco só, com 1 GB.
+- Se preferir um banco isolado, o fluxo local abaixo continua valendo (guarde a string local em outra chave, ex.: `ConnectionStrings:MySqlLocal`, e troque a `MySql` quando quiser).
+
+**Banco local (alternativa):**
 1. Tenha um MySQL local em execução;
 2. Configure a connection string via `dotnet user-secrets` (veja [Back-end](#back-end-c--net)), nunca em `appsettings.json`;
 3. Rode `dotnet ef database update` em `backend/StockSweet.Api`.
