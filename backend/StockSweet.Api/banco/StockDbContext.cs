@@ -18,6 +18,7 @@ namespace StockSweet.Api.banco
         public DbSet<Insumo> Insumo { get; set; }
         public DbSet<MovimentacaoEstoque> MovimentacaoEstoque { get; set; }
         public DbSet<Receita> Receita { get; set; }
+        public DbSet<ItemReceita> ItemReceita { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -53,6 +54,25 @@ namespace StockSweet.Api.banco
             modelBuilder.Entity<Receita>()
                 .HasIndex(r => r.Nome)
                 .IsUnique();
+
+            modelBuilder.Entity<ItemReceita>(item =>
+            {
+                // Excluir a receita leva a ficha técnica junto.
+                item.HasOne(i => i.Receita)
+                    .WithMany(r => r.Itens)
+                    .HasForeignKey(i => i.IdReceita)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // Insumo usado em receita não pode ser excluído.
+                item.HasOne(i => i.Insumo)
+                    .WithMany()
+                    .HasForeignKey(i => i.IdInsumo)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // O mesmo insumo não entra duas vezes na mesma receita.
+                item.HasIndex(i => new { i.IdReceita, i.IdInsumo })
+                    .IsUnique();
+            });
         }
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
@@ -28,5 +29,7 @@ namespace StockSweet.Api.entidades
         public required string UnidadeRendimento { get; set; }
 
         public DateTime DataCadastro { get; set; } = DateTime.Now;
+
+        public List<ItemReceita> Itens { get; set; } = new();
     }
 }
