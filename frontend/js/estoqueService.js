@@ -1,71 +1,92 @@
-// ==========================================
-// STOCKSWEET - SERVIÇO DE SIMULAÇÃO (MOCK)
-// ==========================================
-// Este ficheiro simula as respostas de um servidor backend
-// permitindo testar a interface de entrada de mercadorias de forma independente.
+// Estoque: chamadas à API real (api/insumos e api/movimentacoes).
+// As telas que usam estas funções ficam em js/paginas/estoque.js (entrada e saída de mercadorias).
+import { API_BASE_URL } from "./config.js";
+import { clearSession, getSession } from "./session.js";
 
-// 1. Base de dados simulada de insumos da confeitaria
-const insumosMock = [
-  { idInsumo: 1, nome: "Açúcar Cristal", unidadeMedida: "kg" },
-  { idInsumo: 2, nome: "Farinha de Trigo", unidadeMedida: "kg" },
-  { idInsumo: 3, nome: "Leite Condensado", unidadeMedida: "un" }
+const LOGIN_URL = "index.html";
+const URL_INSUMOS = `${API_BASE_URL}/insumos`;
+const URL_MOVIMENTACOES = `${API_BASE_URL}/movimentacoes`;
+
+// Motivos aceitos pela API em POST /api/movimentacoes/saida (valor enviado -> rótulo na tela).
+export const MOTIVOS_SAIDA = [
+  { valor: "PRODUCAO", rotulo: "Produção", dica: "Usado em uma receita" },
+  { valor: "PERDA_VALIDADE", rotulo: "Perda por validade", dica: "Passou do prazo" },
+  { valor: "AVARIA", rotulo: "Avaria", dica: "Estragou ou quebrou" },
+  { valor: "OUTRO", rotulo: "Outro", dica: "Qualquer outro motivo" },
 ];
 
-/**
- * 2. Função assíncrona que simula a busca de insumos do servidor 
- * (Futuramente será substituída por um fetch GET para a API do .NET)
- */
-function obterInsumosSimulados() {
-  return new Promise((resolve) => {
-    // Simula um atraso de rede (latência de 300ms) idêntico a uma requisição real
-    setTimeout(() => {
-      resolve(insumosMock);
-    }, 300);
-  });
+/* ---------------------------------------------------------
+   Camada de API
+--------------------------------------------------------- */
+
+// Junta as mensagens que a API pode devolver: { message } (400/404) ou o
+// ProblemDetails de validação do ASP.NET ({ errors: { Campo: [msgs] } }).
+function extrairMensagem(corpo, padrao) {
+  if (corpo?.message) return corpo.message;
+
+  if (corpo?.errors && typeof corpo.errors === "object") {
+    const mensagens = Object.values(corpo.errors).flat();
+    if (mensagens.length) return mensagens.join(" ");
+  }
+
+  return padrao;
 }
 
-/**
- * 3. Função assíncrona que simula o envio do registo de entrada para o servidor
- * (Futuramente será substituída por um fetch POST enviando os dados em JSON)
- * @param {Object} dadosMovimentacao - Objeto contendo os dados preenchidos no formulário
- */
-function registrarEntradaSimulada(dadosMovimentacao) {
-  return new Promise((resolve, reject) => {
-    // Simula o tempo de processamento do servidor (500ms)
-    setTimeout(() => {
-      // Validação de regras de negócio no lado do "servidor simulado"
-      if (dadosMovimentacao.quantidade <= 0 || dadosMovimentacao.valorUnitario <= 0) {
-        // Se houver erro, rejeita a promessa com uma mensagem explicativa
-        reject("A quantidade e o valor unitário devem ser maiores que zero.");
-      } else {
-        // Se estiver tudo correto, exibe no console para auditoria e retorna sucesso
-        console.log("Movimentação Registrada com sucesso (Mock):", dadosMovimentacao);
-        resolve({ 
-          sucesso: true, 
-          mensagem: "Entrada de mercadoria registrada com sucesso!" 
-        });
-      }
-    }, 500);
-  });
+async function requisitar(url, opcoes = {}) {
+  // Sem sessão válida não há token pra mandar: volta pro login.
+  const sessao = getSession();
+  if (!sessao) {
+    window.location.replace(LOGIN_URL);
+    throw new Error("Sessão expirada. Faça login novamente.");
+  }
+
+  const cabecalhos = { Authorization: `Bearer ${sessao.token}` };
+  if (opcoes.body) cabecalhos["Content-Type"] = "application/json";
+
+  let resposta;
+  try {
+    resposta = await fetch(url, { ...opcoes, headers: cabecalhos });
+  } catch {
+    throw new Error("Não foi possível conectar ao servidor. Verifique se a API está no ar.");
+  }
+
+  // Token vencido ou inválido: encerra a sessão local e pede login de novo.
+  if (resposta.status === 401) {
+    clearSession();
+    window.location.replace(LOGIN_URL);
+    throw new Error("Sessão expirada. Faça login novamente.");
+  }
+
+  const corpo = resposta.status === 204 ? null : await resposta.json().catch(() => null);
+
+  if (!resposta.ok) {
+    throw new Error(extrairMensagem(corpo, "Não foi possível concluir a operação."));
+  }
+
+  return corpo;
 }
 
-/**
- * 4. Função assíncrona que simula o envio do registro de saída para o servidor
- * @param {Object} dadosSaida - Objeto contendo os dados do formulário de baixa/saída
- */
-function registrarSaidaSimulada(dadosSaida) {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      // Validação: Quantidade deve ser maior que zero
-      if (dadosSaida.quantidade <= 0) {
-        reject("A quantidade de saída deve ser maior que zero.");
-      } else {
-        console.log("Saída Registrada com sucesso (Mock):", dadosSaida);
-        resolve({ 
-          sucesso: true, 
-          mensagem: "Saída de mercadoria registrada com sucesso!" 
-        });
-      }
-    }, 500);
-  });
+// Insumos com saldo: { idInsumo, nome, unidadeMedida, quantidadeEstoque, precoCompra, estoqueMinimo }.
+export function listarInsumos() {
+  return requisitar(URL_INSUMOS);
+}
+
+// Entrada: { idInsumo, quantidade, valorUnitario, observacao? }. Soma ao saldo e atualiza o preço de compra.
+export function registrarEntrada(dados) {
+  return requisitar(`${URL_MOVIMENTACOES}/entrada`, { method: "POST", body: JSON.stringify(dados) });
+}
+
+// Saída: { idInsumo, motivo, quantidade, observacao? }. A API recusa (400) se passar do saldo.
+export function registrarSaida(dados) {
+  return requisitar(`${URL_MOVIMENTACOES}/saida`, { method: "POST", body: JSON.stringify(dados) });
+}
+
+// Histórico, do mais recente ao mais antigo. Filtros opcionais: tipo (ENTRADA/SAIDA), idInsumo, de, ate (yyyy-MM-dd), limite.
+export function listarMovimentacoes({ tipo, idInsumo, de, ate, limite } = {}) {
+  const parametros = new URLSearchParams();
+  for (const [chave, valor] of Object.entries({ tipo, idInsumo, de, ate, limite })) {
+    if (valor !== undefined && valor !== null && valor !== "") parametros.set(chave, String(valor));
+  }
+  const consulta = parametros.toString();
+  return requisitar(consulta ? `${URL_MOVIMENTACOES}?${consulta}` : URL_MOVIMENTACOES);
 }
