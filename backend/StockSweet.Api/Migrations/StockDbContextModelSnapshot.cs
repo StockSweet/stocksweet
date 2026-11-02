@@ -57,6 +57,34 @@ namespace StockSweet.Api.Migrations
                     b.ToTable("Insumo");
                 });
 
+            modelBuilder.Entity("StockSweet.Api.entidades.ItemReceita", b =>
+                {
+                    b.Property<int>("IdItem")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("IdItem"));
+
+                    b.Property<int>("IdInsumo")
+                        .HasColumnType("int");
+
+                    b.Property<int>("IdReceita")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Quantidade")
+                        .HasPrecision(12, 3)
+                        .HasColumnType("decimal(12,3)");
+
+                    b.HasKey("IdItem");
+
+                    b.HasIndex("IdInsumo");
+
+                    b.HasIndex("IdReceita", "IdInsumo")
+                        .IsUnique();
+
+                    b.ToTable("ItemReceita");
+                });
+
             modelBuilder.Entity("StockSweet.Api.entidades.MovimentacaoEstoque", b =>
                 {
                     b.Property<int>("IdMovimentacao")
@@ -104,6 +132,43 @@ namespace StockSweet.Api.Migrations
                     b.ToTable("MovimentacaoEstoque");
                 });
 
+            modelBuilder.Entity("StockSweet.Api.entidades.Receita", b =>
+                {
+                    b.Property<int>("IdReceita")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("IdReceita"));
+
+                    b.Property<DateTime>("DataCadastro")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Descricao")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("varchar(150)");
+
+                    b.Property<decimal>("RendimentoReceita")
+                        .HasPrecision(12, 3)
+                        .HasColumnType("decimal(12,3)");
+
+                    b.Property<string>("UnidadeRendimento")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.HasKey("IdReceita");
+
+                    b.HasIndex("Nome")
+                        .IsUnique();
+
+                    b.ToTable("Receita");
+                });
+
             modelBuilder.Entity("StockSweet.Api.entidades.Usuario", b =>
                 {
                     b.Property<int>("IdUsuario")
@@ -141,6 +206,25 @@ namespace StockSweet.Api.Migrations
                     b.ToTable("Usuario");
                 });
 
+            modelBuilder.Entity("StockSweet.Api.entidades.ItemReceita", b =>
+                {
+                    b.HasOne("StockSweet.Api.entidades.Insumo", "Insumo")
+                        .WithMany()
+                        .HasForeignKey("IdInsumo")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("StockSweet.Api.entidades.Receita", "Receita")
+                        .WithMany("Itens")
+                        .HasForeignKey("IdReceita")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Insumo");
+
+                    b.Navigation("Receita");
+                });
+
             modelBuilder.Entity("StockSweet.Api.entidades.MovimentacaoEstoque", b =>
                 {
                     b.HasOne("StockSweet.Api.entidades.Insumo", "Insumo")
@@ -158,6 +242,11 @@ namespace StockSweet.Api.Migrations
                     b.Navigation("Insumo");
 
                     b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("StockSweet.Api.entidades.Receita", b =>
+                {
+                    b.Navigation("Itens");
                 });
 #pragma warning restore 612, 618
         }
