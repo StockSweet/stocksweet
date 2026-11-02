@@ -236,6 +236,8 @@ export function montarLayout({ ativo } = {}) {
     fecharTodosDialogos();
     definirMenu(false);
     sessaoInvalida = true;
+    const atual = trilhaEl.querySelector(".crumbs__current");
+    if (atual?.textContent === "…") atual.textContent = "Sessão inválida";
     // várias chamadas podem falhar juntas: o aviso só é montado uma vez
     if (conteudo && !conteudo.querySelector("[data-sessao-invalida]")) {
       const { el, titulo } = estadoSessaoInvalida();

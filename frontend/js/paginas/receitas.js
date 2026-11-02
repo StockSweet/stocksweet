@@ -376,8 +376,10 @@ async function mostrarDetalhe(id, token) {
   } catch (erro) {
     if (token !== navegacao) return;
     corpo.replaceChildren();
+    const naoEncontrada = /não encontrad/i.test(erro.message);
+    layout.definirPagina({ titulo: naoEncontrada ? "Receita não encontrada" : "Ficha técnica", trilha: [PAINEL, RECEITAS, { rotulo: naoEncontrada ? "Não encontrada" : "Ficha técnica" }] });
     avisos.replaceChildren(
-      /não encontrad/i.test(erro.message)
+      naoEncontrada
         ? estadoVazio({ titulo: "Receita não encontrada", texto: "Ela pode ter sido excluída. Volte para a lista e escolha outra.", ilustracao: false, iconeNome: "search", acao: { rotulo: "Voltar para receitas", icone: "arrow-left", onClick: () => (window.location.hash = "#/") } })
         : bannerDeFalha(erro.message, tentarDeNovo),
     );
@@ -391,6 +393,7 @@ async function mostrarDetalhe(id, token) {
   estado.insumos = carregado.insumos;
 
   if (!estado.receita) {
+    layout.definirPagina({ titulo: "Receita não encontrada", trilha: [PAINEL, RECEITAS, { rotulo: "Não encontrada" }] });
     corpo.replaceChildren(estadoVazio({ titulo: "Receita não encontrada", texto: "Ela pode ter sido excluída. Volte para a lista e escolha outra.", ilustracao: false, iconeNome: "search", acao: { rotulo: "Voltar para receitas", icone: "arrow-left", onClick: () => (window.location.hash = "#/") } }));
     return;
   }
