@@ -30,6 +30,14 @@ namespace StockSweet.Api.entidades
 
         public DateTime DataCadastro { get; set; } = DateTime.Now;
 
+        // Margem de lucro desejada em percentual (ex: 60.00 para 60%). Padrão: 50%.
+        [Precision(5, 2)]
+        public decimal MargemLucro { get; set; } = 50.00m;
+
+        // Margem mínima de segurança (ex: 20.00 para 20%). Preço sugerido não deve ficar abaixo deste limite.
+        [Precision(5, 2)]
+        public decimal MargemLucroMinima { get; set; } = 20.00m;
+
         public List<ItemReceita> Itens { get; set; } = new();
     }
 }
