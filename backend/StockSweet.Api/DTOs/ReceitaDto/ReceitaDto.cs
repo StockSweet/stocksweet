@@ -17,5 +17,11 @@ namespace StockSweet.Api.DTOs.ReceitaDto
         [Required(ErrorMessage = "A unidade de rendimento é obrigatória.")]
         [StringLength(20, ErrorMessage = "A unidade de rendimento deve ter no máximo 20 caracteres.")]
         public string UnidadeRendimento { get; set; } = string.Empty;
+
+        [Range(0, 500, ErrorMessage = "A margem de lucro deve ser entre 0% e 500%.")]
+        public decimal? MargemLucro { get; set; }
+
+        [Range(0, 500, ErrorMessage = "A margem de lucro mínima deve ser entre 0% e 500%.")]
+        public decimal? MargemLucroMinima { get; set; }
     }
 }
