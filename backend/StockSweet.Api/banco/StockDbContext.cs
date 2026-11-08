@@ -19,6 +19,8 @@ namespace StockSweet.Api.banco
         public DbSet<MovimentacaoEstoque> MovimentacaoEstoque { get; set; }
         public DbSet<Receita> Receita { get; set; }
         public DbSet<ItemReceita> ItemReceita { get; set; }
+        public DbSet<Precificacao> Precificacao { get; set; }
+        public DbSet<ConfiguracaoPrecificacao> ConfiguracaoPrecificacao { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -73,6 +75,31 @@ namespace StockSweet.Api.banco
                 item.HasIndex(i => new { i.IdReceita, i.IdInsumo })
                     .IsUnique();
             });
+
+            modelBuilder.Entity<Precificacao>(preco =>
+            {
+                // Excluir a receita leva o histórico de preços junto.
+                preco.HasOne(p => p.Receita)
+                    .WithMany()
+                    .HasForeignKey(p => p.IdReceita)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // Quem calculou não pode sumir enquanto o snapshot existir.
+                preco.HasOne(p => p.Usuario)
+                    .WithMany()
+                    .HasForeignKey(p => p.IdUsuario)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                preco.HasIndex(p => new { p.IdReceita, p.DataCalculo });
+            });
+
+            // Uma linha só, criada com a margem padrão inicial.
+            modelBuilder.Entity<ConfiguracaoPrecificacao>()
+                .HasData(new ConfiguracaoPrecificacao
+                {
+                    IdConfiguracao = entidades.ConfiguracaoPrecificacao.IdUnico,
+                    MargemPadrao = entidades.ConfiguracaoPrecificacao.MargemPadraoInicial,
+                });
         }
     }
 }

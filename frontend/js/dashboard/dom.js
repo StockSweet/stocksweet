@@ -94,6 +94,13 @@ const ICONS = {
   activity: '<path d="M3 12h4l3-8 4 16 3-8h4"/>',
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.1"/>',
   clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  pencil: '<path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17v3Z"/><path d="m14.5 7.5 3 3"/>',
+  "arrow-left": '<path d="M19 12H5m0 0 6-6m-6 6 6 6"/>',
+  clipboard: '<rect x="5" y="4" width="14" height="17" rx="2.2"/><path d="M9 4.5h6M9 11h6M9 15h4"/>',
+  history: '<path d="M4 12a8 8 0 1 0 2.6-5.9M4 4v4.5h4.5"/><path d="M12 8v4l2.5 1.5"/>',
+  calculator: '<rect x="5" y="3" width="14" height="18" rx="2.5"/><path d="M8.5 7.5h7M9 12h.01M12 12h.01M15 12h.01M9 16h.01M12 16h.01M15 16h.01"/>',
+  "help-circle": '<circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 0 1 4.8.9c0 1.6-2.4 2-2.4 3.4M12 17v.1"/>',
+  user: '<circle cx="12" cy="8" r="3.6"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/>',
 };
 
 export function icon(name, size = 18) {

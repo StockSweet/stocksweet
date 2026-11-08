@@ -102,10 +102,11 @@ Principais entidades do sistema:
 - **Gestor** — herda de Usuario; possui `funcionarios: int` e métodos de cálculo/consulta
 - **Fornecedor** — idFornecedor, nome, telefone, email, endereço, observação
 - **Insumos** — idInsumo, nome, unidadeMedida, quantidadeEstoque, precoCompra, estoqueMinimo
-- **Receita** — idReceita, nome (único), descricao, rendimentoReceita, unidadeRendimento, dataCadastro
+- **Receita** — idReceita, nome (único), descricao, rendimentoReceita, unidadeRendimento, dataCadastro, margemLucro (opcional: margem própria da receita, em %, que sobrepõe a padrão)
 - **ItemReceita** — idItem, idReceita, idInsumo, quantidade (associa Insumos a uma Receita; a quantidade usa a unidade do insumo). O `valorItem` não é gravado: a API o calcula na hora (`quantidade × precoCompra` atual do insumo), porque o `precoCompra` muda a cada entrada de estoque
 - **MovimentacaoEstoque** — idMovimentacao, tipo (ENTRADA/SAIDA), data, quantidade, valorUnitario, observacao
-- **Precificacao** — idPrecificacao, margemLucro, precoSugerido, custoProducao, dataCalculo
+- **Precificacao** — idPrecificacao, idReceita, margemLucro, custoProducao, custoPorUnidade, precoSugerido (por unidade de rendimento), precoSugeridoTotal (receita inteira), idUsuario (quem calculou), dataCalculo. Cada cálculo salvo é um *snapshot* histórico e nunca é alterado
+- **ConfiguracaoPrecificacao** — idConfiguracao, margemPadrao. Tem sempre **uma única linha** (a margem padrão global, valor inicial 30%), usada pelas receitas sem `margemLucro` própria
 
 ---
 
@@ -182,6 +183,88 @@ A data e o usuário da movimentação vêm do servidor (relógio e token), não 
 
 Cada item volta como `{ idItem, idInsumo, nomeInsumo, unidadeMedida, quantidade, precoCompraAtual, valorItem }`. A `quantidade` é sempre expressa na **unidade de medida do próprio insumo** (um insumo em `kg` usa quilos, um em `litros` usa litros) e deve ser maior que zero (400 caso contrário; até 3 casas decimais). O `valorItem` é calculado a cada consulta (`quantidade × precoCompraAtual`, arredondado a 2 casas) e não é gravado no banco, então acompanha as entradas de estoque que mudam o `precoCompra`. Excluir uma receita apaga a ficha técnica junto; já um insumo usado em alguma receita não pode ser excluído (a chave estrangeira é `Restrict`).
 
+**Endpoints de custo** (RF04; mesma autenticação; Usuário e Gestor podem usar):
+
+| Método | Rota | Descrição |
+|---|---|---|
+| GET | `/api/receitas/{id}/custo` | Custo de produção da receita, com o custo e o percentual de cada item e a lista de alertas. 404 `{ message }` se a receita não existir |
+| GET | `/api/receitas/custos` | Resumo de todas as receitas, ordenado por nome: `{ idReceita, nome, custoTotal, custoPorUnidade, quantidadeItens, possuiAlertas }` |
+
+O custo de uma receita volta como:
+
+```json
+{
+  "idReceita": 1, "nomeReceita": "Bolo de cenoura", "rendimentoReceita": 12.0, "unidadeRendimento": "fatias",
+  "custoTotal": 7.05, "custoPorUnidade": 0.59, "calculadoEm": "2026-11-02T10:45:39-03:00",
+  "itens": [
+    { "idItem": 3, "idInsumo": 3, "nomeInsumo": "Farinha", "unidadeMedida": "kg", "quantidade": 0.5,
+      "precoCompraAtual": 5.00, "custoItem": 2.50, "percentualDoCusto": 35.46 }
+  ],
+  "alertas": [
+    { "tipo": "EstoqueInsuficiente", "mensagem": "...", "idInsumo": 5, "nomeInsumo": "Ovos", "unidadeMedida": "un", "quantidadeFaltante": 10.0 }
+  ]
+}
+```
+
+**Fórmula:** `custoItem = quantidade × precoCompra` do insumo; `custoTotal = Σ custoItem`; `custoPorUnidade = custoTotal ÷ rendimentoReceita` (por `unidadeRendimento`). Os cálculos usam `decimal` com os valores exatos e só o resultado é arredondado (2 casas): o `custoTotal` é a soma dos custos exatos, não a soma dos `custoItem` já arredondados, então pode diferir em centavos da soma visual das linhas. O `percentualDoCusto` também usa os valores exatos.
+
+**Sempre ao vivo:** o custo não é gravado em tabela nenhuma (não há migration nem job). Cada leitura recalcula tudo a partir do `precoCompra` **atual** dos insumos, e como `POST /api/movimentacoes/entrada` atualiza o `precoCompra` do insumo, qualquer entrada de estoque com preço novo já aparece no custo da receita na próxima consulta. A leitura é uma única consulta ao banco (a receita com seus itens e insumos; o resumo é uma consulta agregada), sem N+1.
+
+**Alertas** (`tipo`): `ReceitaSemItens` (a receita não tem insumos, então o custo 0 não é real), `PrecoZerado` (insumo com `precoCompra = 0`, que nunca teve entrada: o custo está subestimado) e `EstoqueInsuficiente` (o saldo do insumo é menor que a quantidade usada em **uma** receita; `quantidadeFaltante` diz quanto falta, na unidade do insumo). No resumo, `possuiAlertas` é `true` se houver qualquer um deles.
+
+Outras funcionalidades podem reaproveitar o cálculo (por exemplo, a precificação): `CustoService.CalcularCustoReceita(int idReceita)` devolve o mesmo DTO do endpoint (ou `null` se a receita não existir) e o serviço é registrado por injeção de dependência (`AddScoped`).
+
+**Endpoints de precificação** (RF05 + RF08; **só o Gestor**, veja [Perfis e acesso](#perfis-e-acesso-rnf01); exigem `Authorization: Bearer <token>`):
+
+| Método | Rota | Descrição |
+|---|---|---|
+| GET | `/api/precificacao/margem` | Margem padrão global: `{ margemPadrao }` |
+| PUT | `/api/precificacao/margem` | Altera a margem padrão: `{ margemPadrao }` |
+| PUT | `/api/receitas/{id}/margem` | Define a margem própria da receita: `{ margemLucro }`. Com `{ "margemLucro": null }` remove a margem própria e a receita volta a usar a padrão |
+| GET | `/api/receitas/{id}/preco-sugerido` | Calcula **ao vivo** (não salva): custo, margem efetiva e sua origem, preço sugerido por unidade e total, margem real, variação do custo e alertas |
+| POST | `/api/receitas/{id}/precificacao` | Faz o mesmo cálculo e **salva o snapshot** no histórico. Retorna 201 com `{ idPrecificacao, dataCalculo, calculo }` |
+| GET | `/api/receitas/{id}/precificacao/historico` | Snapshots da receita, mais recentes primeiro. Parâmetro `limite` (1 a 100, padrão 20) |
+| GET | `/api/precificacao` | Visão geral: todas as receitas (por nome) com custo atual, margem efetiva, preço sugerido de hoje, último preço salvo e a flag `desatualizado` |
+
+Erros: `404 { message }` (receita inexistente), `400` (margem ou `limite` inválido; receita sem itens), `403` (usuário comum) e `401` (sem token ou token inválido).
+
+**Fórmula (markup sobre o custo):**
+
+```
+precoSugerido      = custoPorUnidade × (1 + margem ÷ 100)     // por unidade de rendimento (fatia, porção, kg...)
+precoSugeridoTotal = custoTotal      × (1 + margem ÷ 100)     // receita inteira
+margemReal         = (preço − custo) ÷ preço = margem ÷ (100 + margem)
+```
+
+A `margemLucro` é um **acréscimo sobre o custo** (markup), não sobre o preço: uma margem de 30% sobre um custo de R$ 10,00 dá o preço de R$ 13,00, e desses R$ 13,00 o lucro (R$ 3,00) é só **23,08% do preço**. Por isso a resposta traz também a `margemReal` (lucro ÷ preço), para o gestor enxergar a diferença entre as duas leituras: para ficar com 30% *do preço* seria preciso um markup de ≈ 42,86%. Foi escolhido o markup por ser a conta mais simples de explicar na ficha técnica da confeitaria ("custo + 30%"); a `margemReal` existe para ela não ser confundida com a margem sobre o faturamento.
+
+Tudo é calculado em `decimal`, sem arredondar no meio do caminho: o preço sai do custo **exato** (soma de `quantidade × precoCompra`), não do `custoPorUnidade` já arredondado, e só o resultado é arredondado a 2 casas (`MidpointRounding.AwayFromZero`). Exemplo: custo exato de R$ 9,79959 para 12 fatias e margem de 30% dá R$ 1,06 por fatia (R$ 0,8166 × 1,3); partindo do custo por unidade já arredondado (R$ 0,82) daria R$ 1,07. Pelo mesmo motivo o preço da receita inteira pode diferir em centavos de `precoSugerido × rendimento`.
+
+**Margem efetiva:** é a margem própria da receita (`Receita.MargemLucro`) e, se ela não tiver, a margem padrão (`ConfiguracaoPrecificacao.MargemPadrao`); o cálculo informa de onde veio (`origemMargem`: `receita` ou `padrao`). Toda margem deve estar entre **0 e 999,99%**, com no máximo 2 casas decimais (400 caso contrário).
+
+O cálculo ao vivo volta como:
+
+```json
+{
+  "idReceita": 1, "nomeReceita": "Bolo de cenoura", "rendimentoReceita": 12.0, "unidadeRendimento": "fatias",
+  "custoProducao": 10.62, "custoPorUnidade": 0.89,
+  "margemLucro": 50.00, "origemMargem": "receita",
+  "precoSugerido": 1.33, "precoSugeridoTotal": 15.93, "margemReal": 33.33,
+  "variacaoCustoPercentual": 8.37, "custoUltimoCalculo": 9.80, "dataUltimoCalculo": "2026-11-02T10:57:48",
+  "calculadoEm": "2026-11-02T10:57:49-03:00",
+  "alertas": [
+    { "tipo": "VariacaoCusto", "mensagem": "O custo subiu 8,37% desde o último cálculo (02/11/2026) — reavalie o preço." }
+  ]
+}
+```
+
+**Alertas e comparação com o último cálculo:** o cálculo reaproveita os alertas do custo (`ReceitaSemItens`, `PrecoZerado`, `EstoqueInsuficiente`) e compara o custo atual com o do **último snapshot salvo** da receita: `variacaoCustoPercentual` é a variação % do custo total (`null` se a receita nunca foi salva). Se o custo mudou **5% ou mais** (para cima ou para baixo) entra o alerta `VariacaoCusto`, por exemplo "O custo subiu 12% desde o último cálculo — reavalie o preço". Receita **sem itens** não tem preço: `GET .../preco-sugerido` e `POST .../precificacao` retornam 400 com mensagem. Se a receita tem itens mas todos sem preço de compra (custo total R$ 0,00), o cálculo ao vivo sai com os alertas, mas o `POST` também retorna 400, pois um preço de R$ 0,00 no histórico não serve de base para a próxima comparação.
+
+**Visão geral (`GET /api/precificacao`):** cada linha traz o `custoProducao` e o `custoPorUnidade` de hoje, a `margemLucro` efetiva, a `origemMargem`, a `margemReceita` (a própria, se houver), o `precoSugerido` e o `precoSugeridoTotal` de hoje, `possuiAlertas`, o `ultimoPreco` salvo (`null` se nunca foi salvo) e `desatualizado`. O preço salvo está **desatualizado** quando o custo atual da receita é diferente do custo do último snapshot (sem snapshot, `false`); `variacaoCustoPercentual` mostra de quanto foi a mudança e `margemAlterada` indica que a margem efetiva de hoje não é a do último snapshot. A listagem usa 3 consultas ao banco, independente do número de receitas (sem N+1).
+
+### Perfis e acesso (RNF01)
+O perfil do usuário (`Usuario.Nivel`: `Usuario` ou `Gestor`) vai no JWT como o claim `perfil`, e o `Program.cs` o define como o tipo de *role* da autenticação (`RoleClaimType = "perfil"`). Todos os endpoints de precificação usam `[Authorize(Roles = "Gestor")]`: **sem token, 401; token de `Usuario` comum, 403; `Gestor`, acesso liberado**. Os demais endpoints (estoque, receitas e custo) continuam liberados para os dois perfis. Todo usuário nasce com o perfil `Usuario` (`POST /api/auth/register`); promover alguém a Gestor é hoje uma alteração direta no banco, `UPDATE Usuario SET Nivel = 'Gestor' WHERE Email = '...';`, e a pessoa precisa fazer login de novo para o token trazer o novo perfil.
+
 ### Front-end (HTML, CSS e JavaScript)
 O front-end é estático (sem build/bundler) e consome a API via `fetch`. Basta servir a pasta `frontend/` em `http://localhost:5173` (porta já liberada no CORS do back-end):
 ```bash
@@ -191,28 +274,54 @@ npx serve -l 5173
 ```
 A URL base da API é configurada em `frontend/js/config.js`.
 
-**Fluxo de telas:** `index.html` (login) → `dashboard.html` (painel). O painel exige sessão: sem token válido no `localStorage`/`sessionStorage`, volta para o login; e quem já está logado pula o login e vai direto pro painel. O botão "Sair" limpa a sessão.
+**Fluxo de telas:** `index.html` (login) → `dashboard.html` (painel). O painel exige sessão: sem token válido no `localStorage`/`sessionStorage`, volta para o login; e quem já está logado pula o login e vai direto pro painel. O botão "Sair" limpa a sessão. Sem sessão, qualquer tela interna manda para o login guardando a página de origem em `?next` (veja a nota abaixo). A partir do painel, o menu lateral leva a **Receitas**, **Precificação** (só Gestor), **Entrada de mercadorias** e **Saída de mercadorias**.
+
+**Barra lateral única (`frontend/js/sidebar.js`):** o menu lateral é **um só**, igual em todas as páginas internas (painel, receitas, precificação, entrada e saída de mercadorias): mesmos grupos (*Visão geral*, *Estoque*, *Produção*), ordem, rótulos e ícones, e o mesmo rodapé (indicador *Saúde do estoque* + *Configurações*). Ela é gerada por `criarSidebar({ ativo })` a partir da lista `MENU_LATERAL`, então **para criar, mover ou renomear um item do menu basta editar `MENU_LATERAL` em `frontend/js/sidebar.js`**: nenhuma página tem markup de menu próprio (o `dashboard.html` só deixa um `<aside id="sidebar">` vazio, preenchido por `dashboard.js`). Cada página só informa qual item está ativo (`aria-current="page"` + `is-active`). Itens `emBreve: true` (Insumos, Fornecedores, Relatórios, Configurações) viram botões que mostram o mesmo aviso em todas as telas, e `soGestor: true` esconde o item do perfil Usuário (`data-only="gestor"` + `body[data-role]`, regra do `dashboard.css`). No desktop a barra fica **fixa na viewport** (não rola com o conteúdo e tem scroll próprio se o menu for maior que a tela); no celular e tablet ela vira um menu recolhível (botão hambúrguer, `Esc` e o fundo escuro fecham). O indicador *Saúde do estoque* usa os insumos reais (`GET /api/insumos`: % de insumos acima do estoque mínimo) e guarda o último resultado na aba para o menu já nascer igual em todas as páginas; sem resposta da API ele mostra "Indisponível agora".
+
+**Layout compartilhado (`frontend/js/layout.js`):** as telas internas (Receitas, Precificação, Entrada e Saída de mercadorias) usam o mesmo visual do painel (`css/dashboard.css` + `css/app.css`, com tema claro/escuro). O módulo `layout.js` (ES module) monta em volta do `<main id="conteudo">` de cada página a barra lateral única (acima) e a **barra superior do painel**: o **breadcrumb clicável** (ex.: *Painel › Receitas › Bolo de chocolate*), o botão de **tema claro/escuro** (a escolha fica em `localStorage`, igual ao painel) e o **menu do usuário** com *Sair da conta*. Sem sessão válida a página volta ao login. Cada página só chama `montarLayout({ ativo })` e `definirPagina({ titulo, trilha })`. As peças de interface das telas (diálogos e painel lateral com foco preso, confirmação, banners, campos com validação, estado vazio, *skeleton* de carregamento e dica de ajuda) ficam em `frontend/js/componentes.js`.
+
+**Navegação e botão Voltar:** toda tela tem um link **Voltar** visível (além do breadcrumb): *Voltar ao painel* nas listas e *Voltar para receitas* na ficha técnica. A ficha técnica é uma visão detalhe na mesma página, em `cadastro_receitas.html#/receita/{id}`; por usar o hash da URL, o botão voltar do navegador também funciona.
 
 **Painel (dados fictícios):** por enquanto o painel usa dados mock gerados em `frontend/js/dashboard/mock-data.js` — quando os endpoints existirem, é ali o ponto de troca. Os gráficos são SVG desenhados à mão (sem biblioteca) e a tela respeita o perfil do usuário (RNF01): o **Gestor** vê margens, receitas, precificação e exportação do saldo; o **Usuário** vê um bloco bloqueado no lugar. No menu do usuário há um *modo demonstração* pra alternar entre os dois perfis sem precisar de outra conta.
 
-**Movimentação de estoque (dados fictícios):** `entrada_mercadorias.html` (US02) e `saida_mercadorias.html` (US03) trazem os formulários de entrada e saída de mercadorias. Ambos usam `frontend/js/estoqueService.js`, um serviço mock que simula a API (lista de insumos, `registrarEntradaSimulada` e `registrarSaidaSimulada`, com latência e validação de quantidade/valor maior que zero). Quando os endpoints existirem, é nesse arquivo que as funções passam a fazer `fetch` para a API. Essas telas ainda não têm link no menu do painel; são abertas direto pela URL.
+**Entrada e saída de mercadorias (API real):** `entrada_mercadorias.html` (US02) e `saida_mercadorias.html` (US03) usam o mesmo layout compartilhado e o módulo `frontend/js/paginas/estoque.js` (com `entrada.js` e `saida.js` só escolhendo o modo). Os dados vêm de `frontend/js/estoqueService.js`, que faz `fetch` com o token Bearer da sessão: `GET /api/insumos` (alimenta a busca de insumo e mostra saldo, unidade, preço de compra e estoque mínimo), `POST /api/movimentacoes/entrada`, `POST /api/movimentacoes/saida` e `GET /api/movimentacoes` (histórico). Não sobrou nenhuma função simulada. Na **entrada** o formulário pede insumo, quantidade, valor unitário e observação, mostra ao vivo o valor total, o saldo depois e o novo preço de compra, e avisa que o preço do insumo será atualizado e muda o custo das receitas. Na **saída** há o motivo (*Produção*, *Perda por validade*, *Avaria* ou *Outro*), o atalho *Usar saldo todo* e os avisos de saldo abaixo do mínimo ou acima do disponível; se a API recusar por saldo insuficiente (400), a tela mostra a mensagem junto com o saldo disponível. Depois de registrar, aparece um aviso, o formulário é limpo, o saldo do insumo é recarregado e a lista **Últimas movimentações** (tipo, data e hora, insumo, quantidade, valor e usuário, com filtro por *Entradas* e *Saídas*) é atualizada. Cada tela tem *Voltar ao painel* e um link para a outra. Atenção: registrar movimentações de verdade altera o saldo e o preço de compra dos insumos, e isso muda o custo das receitas.
 
-**Cadastro de receitas (API real):** `cadastro_receitas.html` (RF03) lista as receitas e tem o formulário de criar, editar e excluir. Diferente das telas acima, ela já chama a API de verdade: `frontend/js/receitaService.js` faz `fetch` em `/api/receitas` com o token Bearer da sessão (sem token ou com token vencido, volta pro login). O menu **Receitas** do painel leva para essa tela. O botão **Ficha técnica** de cada receita abre a lista dos insumos dela, com um formulário para adicionar insumo (o `<select>` vem de `GET /api/insumos` e mostra a unidade de medida), editar a quantidade e remover.
+**Precificação (API real, só Gestor):** `precificacao.html` (RF05 + RF08) usa `frontend/js/paginas/precificacao.js`, que chama as funções de `frontend/js/precificacaoService.js` (`fetch` nos endpoints de precificação com o token Bearer da sessão). No topo há quatro indicadores: **margem padrão** (com o botão *Alterar margem padrão*, que abre um diálogo), número de receitas, receitas com **preço desatualizado** e receitas **sem preço salvo**. Quando o custo de alguma receita variou **5% ou mais** desde o último preço salvo, um banner em destaque lista as receitas e a variação. A tabela mostra, por receita, a situação (*Atualizado*, *Desatualizado* com a variação do custo, *Sem preço salvo* ou *Sem itens*), o custo, a margem efetiva com o chip *padrão*/*própria*, o preço sugerido por unidade e da receita inteira e o último preço salvo, com busca por nome e filtro por situação. As ações de cada linha são **Calcular e salvar** (abre um resultado com o preço, as margens e os alertas), **Margem da receita** (diálogo com prévia do preço; campo vazio ou *Usar margem padrão* remove a margem própria) e **Histórico** (painel lateral com a linha do tempo dos preços salvos e a variação % do custo entre um e outro). A fórmula (markup) fica numa dica discreta ao lado do subtítulo. Respeitando o perfil (`ehGestor` em `js/session.js`), quem não é Gestor vê uma tela de **acesso restrito** com o botão *Voltar ao painel* e nenhuma chamada à API é feita (a API também recusa com 403); o item *Precificação* do menu só aparece para o Gestor.
 
-> Pra ver o painel sem subir o back-end, rode no console do navegador (na página de login) e abra `dashboard.html`:
+**Receitas (API real):** `cadastro_receitas.html` (RF03) usa `frontend/js/paginas/receitas.js`, que chama as funções de `frontend/js/receitaService.js` (`fetch` em `/api/receitas` e `/api/insumos` com o token Bearer da sessão; sem token ou com token vencido, volta pro login). A **lista** tem busca por nome, tabela com rendimento, número de insumos, **custo total** e **custo por unidade** (de `GET /api/receitas/custos`, com o selo *Atenção* nas receitas com alertas) e as ações *Ficha técnica*, *Editar* e *Excluir*; em telas estreitas a tabela vira cartões empilhados. *Nova receita* e *Editar* abrem o formulário em um diálogo, e a exclusão pede confirmação em outro diálogo. Há estados de carregamento (*skeleton*), de lista vazia (com botão para cadastrar a primeira receita) e de erro (banner com *Tentar de novo*).
+
+A **ficha técnica** (`#/receita/{id}`) mostra o nome, o rendimento e a descrição, cartões de resumo (custo total, custo por unidade, número de insumos e, só para o Gestor, o preço sugerido; o perfil Usuário não chama os endpoints de preço), os **alertas do custo** como banners por severidade (receita sem itens, insumo sem preço de compra, estoque insuficiente) e a tabela dos insumos com quantidade, preço atual, custo do item e a barra de **% do custo**. O formulário para **adicionar insumo** fica na própria tabela (campo de busca de insumos, quantidade com a unidade do insumo e custo estimado); a quantidade se edita na linha (`Enter` salva, `Esc` cancela) e a remoção pede confirmação. O custo (`GET /api/receitas/{id}/custo`) é buscado de novo a cada mudança nos itens; o botão *Atualizar custo* serve depois de uma entrada de estoque.
+
+> Pra ver só o painel de exemplo sem subir o back-end, rode no console do navegador (na página de login) e abra `dashboard.html`:
 > ```js
 > sessionStorage.setItem("stocksweet.token", "x.e30.x");
 > sessionStorage.setItem("stocksweet.usuario", JSON.stringify({ nome: "Seu Nome", email: "voce@exemplo.com", nivel: "Gestor" }));
 > ```
-> Isso só libera a tela (a checagem do front é conveniência de UX); qualquer chamada real à API continua exigindo um JWT válido.
+> Esse atalho **só libera o painel de exemplo** (que usa dados fictícios). **Receitas, Precificação e Entrada/Saída de mercadorias chamam a API de verdade e exigem login real**: com o token falso a API responde 401 e a própria tela (dentro do menu lateral, com o botão *Voltar ao painel*) mostra o aviso *"Sua sessão expirou ou não é válida"* com o botão **Entrar novamente**, em vez de te jogar no login sem explicação. Esse botão limpa a sessão e abre o login com `?next=<página onde você estava>` (por exemplo `index.html?next=cadastro_receitas.html%23%2Freceita%2F65`); depois de entrar, o login volta para essa página. O `next` só vale para um caminho relativo de página do próprio site (`*.html`, com `?`/`#` opcionais): endereços com esquema ou host (`http:`, `javascript:`), `//`, barras invertidas ou `..` são ignorados e o login segue para o painel. A regra fica em `proximaUrlSegura` (`frontend/js/session.js`) e o tratamento do 401 é único, para todos os serviços (`sessaoInvalida`, também no `session.js`).
 
 ### Banco de dados
-O schema é criado pelas migrations do EF Core (`backend/StockSweet.Api/Migrations`), então não há script SQL manual:
+**Banco compartilhado (recomendado para o time):** o projeto usa um MySQL gratuito no [Aiven](https://aiven.io) (serviço `stocksweet-free`, plano Free, MySQL 8.4), então o que um dev altera os outros veem. Cada dev tem o **próprio usuário** (`pietro`, `michael`, `alice`, `matheus`, `osvaldo`); host, porta e senha são passados em privado pelo Pietro e **nunca** vão pro repositório:
+
+```bash
+cd backend/StockSweet.Api
+dotnet user-secrets set "ConnectionStrings:MySql" "server=HOST;port=PORTA;database=defaultdb;user=SEU_USUARIO;password=SUA_SENHA;SslMode=Required;"
+dotnet ef database update   # só aplica o que ainda não foi aplicado
+```
+
+Atenção ao usar o banco compartilhado:
+- O plano Free **desliga sozinho quando fica inativo**: se a API não conectar, ligue o serviço no console do Aiven (Overview → Power on) e espere ficar *Running*.
+- Rode `dotnet ef database update` depois de cada `git pull` que traga migration nova, e **combine no grupo antes de gerar migration nova**, pra duas pessoas não criarem migrations conflitantes no mesmo banco.
+- Não apague dados dos outros: é um banco só, com 1 GB.
+- Se preferir um banco isolado, o fluxo local abaixo continua valendo (guarde a string local em outra chave, ex.: `ConnectionStrings:MySqlLocal`, e troque a `MySql` quando quiser).
+
+**Banco local (alternativa):**
 1. Tenha um MySQL local em execução;
 2. Configure a connection string via `dotnet user-secrets` (veja [Back-end](#back-end-c--net)), nunca em `appsettings.json`;
 3. Rode `dotnet ef database update` em `backend/StockSweet.Api`.
 
-Hoje as migrations cobrem `Usuario` (com o campo `Nivel`: Usuário/Gestor), `Insumo`, `MovimentacaoEstoque`, `Receita` (nome único) e `ItemReceita` (único por receita + insumo). As demais entidades do [Modelo de dados](#-modelo-de-dados) (Fornecedor, Precificacao) entram nas próximas sprints.
+A migration `AddPrecificacao` cria a tabela `Precificacao` (snapshots; excluir a receita apaga o histórico junto, e o usuário que calculou não pode ser excluído enquanto houver snapshot), a tabela `ConfiguracaoPrecificacao` (já com a linha única da margem padrão em 30%) e a coluna `Receita.MargemLucro` (nula por padrão). Quem já tem o banco criado só precisa rodar `dotnet ef database update` de novo.
+
+Hoje as migrations cobrem `Usuario` (com o campo `Nivel`: Usuário/Gestor), `Insumo`, `MovimentacaoEstoque`, `Receita` (nome único) e `ItemReceita` (único por receita + insumo), `Precificacao` (histórico de preços) e `ConfiguracaoPrecificacao` (margem padrão). A entidade Fornecedor do [Modelo de dados](#-modelo-de-dados) entra nas próximas sprints.
 
 ---
 
@@ -221,22 +330,24 @@ Hoje as migrations cobrem `Usuario` (com o campo `Nivel`: Usuário/Gestor), `Ins
 ```
 stocksweet/
 ├── backend/StockSweet.Api/   # API em C# (.NET)
-│   ├── Controllers/          # AuthController, InsumosController, MovimentacoesController, ReceitasController, ItensReceitaController
-│   ├── DTOs/                 # AuthDto, EstoqueDto, ReceitaDto
+│   ├── Controllers/          # AuthController, InsumosController, MovimentacoesController, ReceitasController, ItensReceitaController, CustosController, PrecificacaoController
+│   ├── DTOs/                 # AuthDto, EstoqueDto, ReceitaDto, CustoDto, PrecificacaoDto
 │   ├── banco/                # StockDbContext (EF Core)
-│   ├── entidades/            # Usuario, Insumo, MovimentacaoEstoque, Receita, ItemReceita (e enums)
-│   ├── services/             # JwtService, EmailValidacao
+│   ├── entidades/            # Usuario, Insumo, MovimentacaoEstoque, Receita, ItemReceita, Precificacao, ConfiguracaoPrecificacao (e enums)
+│   ├── services/             # JwtService, EmailValidacao, EstoqueService, CustoService, PrecificacaoService
 │   └── Migrations/
 ├── frontend/                 # Aplicação estática (HTML, CSS e JavaScript)
-│   ├── css/                  # style.css (login e formulários) e dashboard.css (painel)
-│   ├── js/                   # config.js, login.js, session.js, estoqueService.js (mock), receitaService.js,
-│   │                         # dashboard.js e dashboard/ (módulos do painel)
+│   ├── css/                  # style.css (login e formulários), dashboard.css (design system do painel) e app.css (telas internas)
+│   ├── js/                   # config.js, login.js, session.js, sidebar.js (menu lateral único), layout.js (topbar e shell), componentes.js (diálogos, banners…),
+│   │                         # estoqueService.js, receitaService.js e precificacaoService.js (API),
+│   │                         # paginas/ (receitas.js, precificacao.js, estoque.js, entrada.js e saida.js), dashboard.js e dashboard/ (módulos do painel)
 │   ├── assets/
 │   ├── index.html            # login
 │   ├── dashboard.html        # painel pós-login
 │   ├── entrada_mercadorias.html
 │   ├── saida_mercadorias.html
-│   └── cadastro_receitas.html
+│   ├── cadastro_receitas.html
+│   └── precificacao.html
 └── docs/                     # Declaração de Visão, diagramas, relatório técnico
 ```
 

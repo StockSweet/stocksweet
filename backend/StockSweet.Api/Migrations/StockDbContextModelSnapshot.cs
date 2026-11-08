@@ -22,6 +22,27 @@ namespace StockSweet.Api.Migrations
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
 
+            modelBuilder.Entity("StockSweet.Api.entidades.ConfiguracaoPrecificacao", b =>
+                {
+                    b.Property<int>("IdConfiguracao")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("MargemPadrao")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
+
+                    b.HasKey("IdConfiguracao");
+
+                    b.ToTable("ConfiguracaoPrecificacao");
+
+                    b.HasData(
+                        new
+                        {
+                            IdConfiguracao = 1,
+                            MargemPadrao = 30m
+                        });
+                });
+
             modelBuilder.Entity("StockSweet.Api.entidades.Insumo", b =>
                 {
                     b.Property<int>("IdInsumo")
@@ -132,6 +153,52 @@ namespace StockSweet.Api.Migrations
                     b.ToTable("MovimentacaoEstoque");
                 });
 
+            modelBuilder.Entity("StockSweet.Api.entidades.Precificacao", b =>
+                {
+                    b.Property<int>("IdPrecificacao")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("IdPrecificacao"));
+
+                    b.Property<decimal>("CustoPorUnidade")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("decimal(12,2)");
+
+                    b.Property<decimal>("CustoProducao")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("decimal(12,2)");
+
+                    b.Property<DateTime>("DataCalculo")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("IdReceita")
+                        .HasColumnType("int");
+
+                    b.Property<int>("IdUsuario")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("MargemLucro")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<decimal>("PrecoSugerido")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("decimal(12,2)");
+
+                    b.Property<decimal>("PrecoSugeridoTotal")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("decimal(12,2)");
+
+                    b.HasKey("IdPrecificacao");
+
+                    b.HasIndex("IdUsuario");
+
+                    b.HasIndex("IdReceita", "DataCalculo");
+
+                    b.ToTable("Precificacao");
+                });
+
             modelBuilder.Entity("StockSweet.Api.entidades.Receita", b =>
                 {
                     b.Property<int>("IdReceita")
@@ -146,6 +213,10 @@ namespace StockSweet.Api.Migrations
                     b.Property<string>("Descricao")
                         .HasMaxLength(500)
                         .HasColumnType("varchar(500)");
+
+                    b.Property<decimal?>("MargemLucro")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
 
                     b.Property<string>("Nome")
                         .IsRequired()
@@ -240,6 +311,25 @@ namespace StockSweet.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Insumo");
+
+                    b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("StockSweet.Api.entidades.Precificacao", b =>
+                {
+                    b.HasOne("StockSweet.Api.entidades.Receita", "Receita")
+                        .WithMany()
+                        .HasForeignKey("IdReceita")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("StockSweet.Api.entidades.Usuario", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("IdUsuario")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Receita");
 
                     b.Navigation("Usuario");
                 });
