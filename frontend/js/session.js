@@ -53,3 +53,52 @@ export function clearSession() {
 export function ehGestor(usuario) {
   return String(usuario?.nivel ?? "").toLowerCase() === "gestor";
 }
+
+/* ---------------------------------------------------------
+   Sessão inválida: aviso na tela + volta ao login com ?next
+--------------------------------------------------------- */
+
+const LOGIN_URL = "index.html";
+export const EVENTO_SESSAO_INVALIDA = "stocksweet:sessao-invalida";
+
+// Erro lançado pelos serviços quando a API recusa o token (401) ou não há token.
+export class SessaoInvalidaErro extends Error {
+  constructor() {
+    super("Sua sessão expirou ou não é válida. Entre novamente para continuar.");
+    this.name = "SessaoInvalidaErro";
+  }
+}
+
+export const ehErroDeSessao = (erro) => erro instanceof SessaoInvalidaErro;
+
+// Página em que o usuário está, em caminho relativo (ex.: "cadastro_receitas.html#/receita/65").
+export function paginaAtual() {
+  const arquivo = window.location.pathname.split("/").pop() || "dashboard.html";
+  return `${arquivo}${window.location.search}${window.location.hash}`;
+}
+
+// Só aceita caminho relativo para uma página .html do próprio site: nada de esquema, host,
+// "//", barras invertidas ou "..". Qualquer outra coisa (ou o próprio login) vira null.
+const NEXT_SEGURO = /^[A-Za-z0-9_-]+\.html(?:[?#][^\s\\]*)?$/;
+
+export function proximaUrlSegura(valor) {
+  if (typeof valor !== "string" || !NEXT_SEGURO.test(valor)) return null;
+  if (valor.includes("..") || valor.startsWith(LOGIN_URL)) return null;
+  return valor;
+}
+
+export function urlDeLogin(proxima = paginaAtual()) {
+  return `${LOGIN_URL}?next=${encodeURIComponent(proxima)}`;
+}
+
+// Vai ao login guardando a página de origem; com limpar=true encerra a sessão local antes.
+export function irParaLogin({ limpar = false } = {}) {
+  if (limpar) clearSession();
+  window.location.replace(urlDeLogin());
+}
+
+// Chamado pelos serviços no 401: avisa a tela (layout.js mostra o aviso) e devolve o erro para lançar.
+export function sessaoInvalida() {
+  window.dispatchEvent(new CustomEvent(EVENTO_SESSAO_INVALIDA));
+  return new SessaoInvalidaErro();
+}

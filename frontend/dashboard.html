@@ -30,37 +30,8 @@
 
   <div class="app" id="app">
     <!-- ============ Navegação lateral ============ -->
-    <aside class="sidebar" id="sidebar" aria-label="Navegação principal">
-      <div class="sidebar__brand">
-        <img class="sidebar__mark" src="assets/favicon.svg" alt="" width="38" height="38" />
-        <span class="sidebar__word">Stock<em>Sweet</em></span>
-        <button type="button" class="icon-btn sidebar__close" id="sidebarClose" aria-label="Fechar menu">
-          <span data-icon="x"></span>
-        </button>
-      </div>
-
-      <nav class="sidebar__nav">
-        <p class="sidebar__group">Visão geral</p>
-        <a class="nav-item is-active" href="dashboard.html" aria-current="page">
-          <span data-icon="dashboard"></span><span>Painel</span>
-        </a>
-
-        <p class="sidebar__group">Estoque</p>
-        <button type="button" class="nav-item" data-soon="Insumos"><span data-icon="box"></span><span>Insumos</span></button>
-        <button type="button" class="nav-item" data-soon="Fornecedores"><span data-icon="truck"></span><span>Fornecedores</span></button>
-        <button type="button" class="nav-item" data-soon="Movimentações"><span data-icon="swap"></span><span>Movimentações</span></button>
-
-        <p class="sidebar__group">Produção</p>
-        <a class="nav-item" href="cadastro_receitas.html"><span data-icon="recipe"></span><span>Receitas</span></a>
-        <button type="button" class="nav-item" data-only="gestor" data-soon="Precificação"><span data-icon="tag"></span><span>Precificação</span></button>
-        <button type="button" class="nav-item" data-only="gestor" data-soon="Relatórios"><span data-icon="chart"></span><span>Relatórios</span></button>
-      </nav>
-
-      <div class="sidebar__foot">
-        <div class="health" id="sideHealth" aria-live="polite"></div>
-        <button type="button" class="nav-item" data-soon="Configurações"><span data-icon="sliders"></span><span>Configurações</span></button>
-      </div>
-    </aside>
+    <!-- O conteúdo vem de js/sidebar.js (a mesma barra lateral de todas as telas). -->
+    <aside class="sidebar" id="sidebar" aria-label="Navegação principal"></aside>
     <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
     <div class="main">
