@@ -14,6 +14,10 @@ namespace StockSweet.Api.DTOs.ReceitaDto
 
         public DateTime DataCadastro { get; set; }
 
+        public decimal MargemLucro { get; set; }
+
+        public decimal MargemLucroMinima { get; set; }
+
         public int QuantidadeItens { get; set; }
     }
 }
