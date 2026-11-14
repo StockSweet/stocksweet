@@ -109,6 +109,7 @@ function blocoConsumo(top) {
           h(
             "li",
             { class: "feed-item" },
+            h("span", { class: "feed-item__icon feed-item__icon--saida" }, icon("arrow-out", 16)),
             h("div", { class: "feed-item__txt" }, h("strong", null, c.nome), medidor({ razao: maior ? c.quantidadeConsumida / maior : 0, tom: "ok" })),
             h("div", { class: "feed-item__val" }, h("strong", null, qtd(c.quantidadeConsumida, c.unidadeMedida)), c.valorTotalConsumido != null ? h("small", null, brl(c.valorTotalConsumido)) : null),
           ),
@@ -127,6 +128,7 @@ function blocoReceitas(custos) {
           h(
             "li",
             { class: "feed-item" },
+            h("span", { class: "feed-item__icon" }, icon("recipe", 16)),
             h("div", { class: "feed-item__txt" }, h("a", { class: "feed-item__name", href: `cadastro_receitas.html#/receita/${r.idReceita}` }, r.nome), h("small", null, `${r.quantidadeItens} insumo${r.quantidadeItens === 1 ? "" : "s"} na ficha técnica`)),
             h("div", { class: "feed-item__val" }, h("strong", null, brl(r.custoPorUnidade)), h("small", null, "por unidade")),
           ),
