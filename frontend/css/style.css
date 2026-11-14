@@ -500,9 +500,10 @@ button {
 .auth__form-side {
   position: relative;
   overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: center;
+  justify-items: center;
   padding: clamp(28px, 5vw, 56px) clamp(20px, 5vw, 40px);
   background: var(--cream);
   background-image: radial-gradient(rgba(139, 74, 90, 0.07) 1px, transparent 1px);
@@ -554,11 +555,29 @@ button {
   transition: opacity 0.35s var(--ease-out), transform 0.35s var(--ease-out);
 }
 
-.auth__form-wrap.is-hidden {
-  opacity: 0;
-  transform: translateY(-10px) scale(0.98);
+.auth__form-wrap,
+.auth__success {
+  grid-area: 1 / 1;
+}
+
+.auth__form-wrap.is-leaving {
   pointer-events: none;
-  position: absolute;
+  animation: form-out 0.42s var(--ease-soft) both;
+}
+
+@keyframes form-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-14px) scale(0.97);
+  }
+}
+
+.auth__form-wrap[hidden] {
+  display: none;
 }
 
 @keyframes form-in {
@@ -999,20 +1018,27 @@ input.is-invalid {
 --------------------------------------------------------- */
 
 .auth__success {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 10px;
-  max-width: 320px;
+  gap: 8px;
+  width: 100%;
+  max-width: 440px;
+  padding: clamp(36px, 5vw, 52px) clamp(28px, 4.5vw, 44px);
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
   opacity: 0;
-  transform: translateY(10px);
-  transition: opacity 0.45s var(--ease-out), transform 0.45s var(--ease-out);
+  transform: translateY(18px) scale(0.97);
+  transition: opacity 0.5s var(--ease-out), transform 0.5s var(--ease-out);
 }
 
 .auth__success.is-visible {
   opacity: 1;
-  transform: translateY(0);
+  transform: translateY(0) scale(1);
 }
 
 .auth__success[hidden] {
@@ -1021,10 +1047,35 @@ input.is-invalid {
 
 .auth__success-check {
   position: relative;
-  width: 72px;
-  height: 72px;
+  width: 84px;
+  height: 84px;
   color: var(--wine);
-  margin-bottom: 6px;
+  margin-bottom: 10px;
+}
+
+.auth__success-check::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border-radius: 50%;
+  background: var(--pink);
+  opacity: 0;
+  transform: scale(0.6);
+}
+
+.auth__success.is-visible .auth__success-check::before {
+  animation: check-pop 0.5s var(--ease-out) 0.05s forwards;
+}
+
+.auth__success-check svg {
+  position: relative;
+}
+
+@keyframes check-pop {
+  to {
+    opacity: 0.55;
+    transform: scale(1);
+  }
 }
 
 .confetti {
@@ -1047,7 +1098,7 @@ input.is-invalid {
 }
 
 .auth__success.is-visible .confetti {
-  animation: confetti-burst 0.7s var(--ease-out) 0.25s both;
+  animation: confetti-burst 0.8s var(--ease-out) 0.6s both;
 }
 
 @keyframes confetti-burst {
@@ -1062,7 +1113,18 @@ input.is-invalid {
 }
 
 .auth__success-circle {
-  opacity: 0.25;
+  stroke-dasharray: 151;
+  stroke-dashoffset: 151;
+}
+
+.auth__success.is-visible .auth__success-circle {
+  animation: draw-circle 0.55s var(--ease-out) 0.05s forwards;
+}
+
+@keyframes draw-circle {
+  to {
+    stroke-dashoffset: 0;
+  }
 }
 
 .auth__success-tick {
@@ -1071,7 +1133,7 @@ input.is-invalid {
 }
 
 .auth__success.is-visible .auth__success-tick {
-  animation: draw-tick 0.5s var(--ease-out) 0.2s forwards;
+  animation: draw-tick 0.45s var(--ease-out) 0.45s forwards;
 }
 
 @keyframes draw-tick {
@@ -1081,13 +1143,90 @@ input.is-invalid {
 }
 
 .auth__success h2 {
-  font-size: 23px;
+  font-size: 24px;
   color: var(--text-strong);
 }
 
 .auth__success p {
-  font-size: 14px;
-  color: var(--text-muted);
+  font-size: 14.5px;
+  color: var(--text);
+}
+
+.auth__success h2,
+.auth__success p,
+.auth__success-progress,
+.auth__success-go {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.auth__success.is-visible h2,
+.auth__success.is-visible p,
+.auth__success.is-visible .auth__success-progress,
+.auth__success.is-visible .auth__success-go {
+  animation: success-rise 0.5s var(--ease-out) forwards;
+}
+
+.auth__success.is-visible h2 {
+  animation-delay: 0.5s;
+}
+.auth__success.is-visible p {
+  animation-delay: 0.6s;
+}
+.auth__success.is-visible .auth__success-progress {
+  animation-delay: 0.75s;
+}
+.auth__success.is-visible .auth__success-go {
+  animation-delay: 0.85s;
+}
+
+@keyframes success-rise {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.auth__success-progress {
+  width: 100%;
+  max-width: 240px;
+  height: 5px;
+  margin-top: 14px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-border);
+}
+
+.auth__success-progress span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--wine), var(--gold));
+  transform: scaleX(0);
+  transform-origin: left;
+}
+
+.auth__success.is-visible .auth__success-progress span {
+  animation: progress-fill var(--redirect, 1.5s) linear 0.75s forwards;
+}
+
+@keyframes progress-fill {
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.auth__success-go {
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--wine);
+  text-decoration: none;
+}
+
+.auth__success-go:hover {
+  text-decoration: underline;
 }
 
 /* ---------------------------------------------------------

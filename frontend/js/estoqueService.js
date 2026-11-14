@@ -82,3 +82,14 @@ export function listarMovimentacoes({ tipo, idInsumo, de, ate, limite } = {}) {
   const consulta = parametros.toString();
   return requisitar(consulta ? `${URL_MOVIMENTACOES}?${consulta}` : URL_MOVIMENTACOES);
 }
+
+// Alertas de estoque baixo (RF06): { idInsumo, nome, unidadeMedida, quantidadeEstoque, estoqueMinimo, quantidadeParaRepor, nivel }.
+// nivel: "critico" (até metade do mínimo) ou "baixo" (até o mínimo).
+export function listarAlertas() {
+  return requisitar(`${URL_INSUMOS}/alertas`);
+}
+
+// Relatório de saldo (US06/RF07), só para o Gestor: { resumo, insumos, ultimasMovimentacoes, topConsumo }.
+export function obterRelatorioSaldo() {
+  return requisitar(`${URL_INSUMOS}/dashboard-saldo`);
+}

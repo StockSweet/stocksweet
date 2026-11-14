@@ -248,7 +248,7 @@
         </p>
       </div>
 
-      <div class="auth__success" id="successState" hidden>
+      <div class="auth__success" id="successState" role="status" aria-live="polite" hidden>
         <div class="auth__success-check">
           <svg viewBox="0 0 52 52" fill="none">
             <circle class="auth__success-circle" cx="26" cy="26" r="24" stroke="currentColor" stroke-width="2.5" />
@@ -265,6 +265,8 @@
         </div>
         <h2>Login realizado!</h2>
         <p>Bem-vindo, <strong id="successName">usuário</strong>.</p>
+        <div class="auth__success-progress" aria-hidden="true"><span></span></div>
+        <a class="auth__success-go" id="successGo" href="dashboard.html">Entrando no painel… ir agora</a>
       </div>
     </section>
   </main>

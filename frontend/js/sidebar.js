@@ -21,8 +21,8 @@ export const MENU_LATERAL = [
   {
     grupo: "Estoque",
     itens: [
-      { id: "insumos", rotulo: "Insumos", icone: "box", emBreve: true },
-      { id: "fornecedores", rotulo: "Fornecedores", icone: "truck", emBreve: true },
+      { id: "insumos", rotulo: "Insumos", icone: "box", href: "insumos.html" },
+      { id: "fornecedores", rotulo: "Fornecedores", icone: "truck", href: "fornecedores.html" },
       { id: "entrada", rotulo: "Entrada de mercadorias", icone: "arrow-in", href: "entrada_mercadorias.html" },
       { id: "saida", rotulo: "Saída de mercadorias", icone: "arrow-out", href: "saida_mercadorias.html" },
     ],
@@ -32,13 +32,10 @@ export const MENU_LATERAL = [
     itens: [
       { id: "receitas", rotulo: "Receitas", icone: "recipe", href: "cadastro_receitas.html" },
       { id: "precificacao", rotulo: "Precificação", icone: "tag", href: "precificacao.html", soGestor: true },
-      { id: "relatorios", rotulo: "Relatórios", icone: "chart", emBreve: true, soGestor: true },
+      { id: "relatorios", rotulo: "Relatório de saldo", icone: "chart", href: "relatorio_saldo.html", soGestor: true },
     ],
   },
 ];
-
-// Item do rodapé (fixo, depois do indicador de saúde).
-const ITEM_CONFIGURACOES = { id: "configuracoes", rotulo: "Configurações", icone: "sliders", emBreve: true };
 
 // Evento que as telas escutam para fechar o menu recolhível (celular/tablet).
 export const EVENTO_FECHAR_MENU = "stocksweet:fechar-menu";
@@ -66,7 +63,7 @@ export function criarSidebar({ ativo } = {}) {
       h("button", { type: "button", class: "icon-btn sidebar__close", id: "sidebarClose", "aria-label": "Fechar menu" }, h("span", { class: "icon-slot", "data-icon": "x" }, icon("x"))),
     ),
     h("nav", { class: "sidebar__nav" }, ...MENU_LATERAL.flatMap((grupo) => [h("p", { class: "sidebar__group" }, grupo.grupo), ...grupo.itens.map((item) => itemDoMenu(item, ativo))])),
-    h("div", { class: "sidebar__foot" }, h("div", { class: "health", id: "sideHealth", "aria-live": "polite" }), itemDoMenu(ITEM_CONFIGURACOES, ativo)),
+    h("div", { class: "sidebar__foot" }, h("div", { class: "health", id: "sideHealth", "aria-live": "polite" })),
   );
 
   // Itens "em breve": mesmo aviso em todas as telas.

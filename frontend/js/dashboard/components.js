@@ -1,7 +1,7 @@
 // Componentes pequenos reutilizados por vários widgets.
 
 import { h, icon } from "./dom.js";
-import { STATUS_LABEL } from "./analytics.js";
+const STATUS_LABEL = { ok: "Ok", baixo: "Baixo", critico: "Crítico" };
 
 const ICONE_STATUS = { ok: "check", baixo: "alert", critico: "alert-octagon" };
 

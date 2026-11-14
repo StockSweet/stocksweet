@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using StockSweet.Api.banco;
 using StockSweet.Api.DTOs.EstoqueDto;
+using StockSweet.Api.DTOs.InsumoDto;
+using StockSweet.Api.entidades;
 
 namespace StockSweet.Api.Controllers
 {
@@ -34,6 +36,8 @@ namespace StockSweet.Api.Controllers
                     QuantidadeEstoque = i.QuantidadeEstoque,
                     PrecoCompra = i.PrecoCompra,
                     EstoqueMinimo = i.EstoqueMinimo,
+                    IdFornecedor = i.IdFornecedor,
+                    NomeFornecedor = i.Fornecedor != null ? i.Fornecedor.Nome : null,
                 })
                 .ToListAsync();
 
@@ -101,9 +105,10 @@ namespace StockSweet.Api.Controllers
             return Ok(insumos);
         }
 
-        // Endpoint dedicado de análise e visualização consolidada do saldo (Dashboard de Saldo)
+        // Relatório de saldo consolidado (US06): restrito ao Gestor (RNF01).
         // GET /api/insumos/dashboard-saldo
         [HttpGet("dashboard-saldo")]
+        [Authorize(Roles = "Gestor")]
         public async Task<IActionResult> ObterDashboardSaldo()
         {
             var insumosBase = await _context.Insumo
@@ -217,6 +222,8 @@ namespace StockSweet.Api.Controllers
                     QuantidadeEstoque = i.QuantidadeEstoque,
                     PrecoCompra = i.PrecoCompra,
                     EstoqueMinimo = i.EstoqueMinimo,
+                    IdFornecedor = i.IdFornecedor,
+                    NomeFornecedor = i.Fornecedor != null ? i.Fornecedor.Nome : null,
                 })
                 .FirstOrDefaultAsync();
 
@@ -229,6 +236,126 @@ namespace StockSweet.Api.Controllers
             }
 
             return Ok(insumo);
+        }
+        [HttpPost]
+        public async Task<IActionResult> Criar(InsumoDto dto)
+        {
+            var erro = await Validar(dto, null);
+            if (erro != null) return erro;
+
+            var insumo = new Insumo
+            {
+                Nome = dto.Nome.Trim(),
+                UnidadeMedida = dto.UnidadeMedida.Trim(),
+                PrecoCompra = dto.PrecoCompra,
+                EstoqueMinimo = dto.EstoqueMinimo,
+                IdFornecedor = dto.IdFornecedor,
+            };
+
+            _context.Insumo.Add(insumo);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(Obter), new { id = insumo.IdInsumo }, await ObterResposta(insumo.IdInsumo));
+        }
+
+        // O saldo não é editável aqui: só muda por entrada e saída de mercadorias.
+        [HttpPut("{id:int}")]
+        public async Task<IActionResult> Atualizar(int id, InsumoDto dto)
+        {
+            var insumo = await _context.Insumo.FirstOrDefaultAsync(i => i.IdInsumo == id);
+
+            if (insumo == null)
+            {
+                return NotFound(new { message = "Insumo não encontrado." });
+            }
+
+            var erro = await Validar(dto, id);
+            if (erro != null) return erro;
+
+            insumo.Nome = dto.Nome.Trim();
+            insumo.UnidadeMedida = dto.UnidadeMedida.Trim();
+            insumo.PrecoCompra = dto.PrecoCompra;
+            insumo.EstoqueMinimo = dto.EstoqueMinimo;
+            insumo.IdFornecedor = dto.IdFornecedor;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(await ObterResposta(id));
+        }
+
+        // Insumo com histórico de movimentações ou usado em receita não pode ser excluído.
+        [HttpDelete("{id:int}")]
+        public async Task<IActionResult> Excluir(int id)
+        {
+            var insumo = await _context.Insumo.FirstOrDefaultAsync(i => i.IdInsumo == id);
+
+            if (insumo == null)
+            {
+                return NotFound(new { message = "Insumo não encontrado." });
+            }
+
+            var receitas = await _context.ItemReceita.CountAsync(i => i.IdInsumo == id);
+            if (receitas > 0)
+            {
+                return Conflict(new
+                {
+                    message = $"Este insumo é usado em {receitas} {(receitas == 1 ? "receita" : "receitas")}. Remova-o das fichas técnicas antes de excluir."
+                });
+            }
+
+            if (await _context.MovimentacaoEstoque.AnyAsync(m => m.IdInsumo == id))
+            {
+                return Conflict(new
+                {
+                    message = "Este insumo já tem movimentações de estoque e não pode ser excluído, para preservar o histórico."
+                });
+            }
+
+            _context.Insumo.Remove(insumo);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+
+        private async Task<IActionResult?> Validar(InsumoDto dto, int? ignorarId)
+        {
+            var nome = dto.Nome.Trim();
+
+            if (nome.Length == 0 || dto.UnidadeMedida.Trim().Length == 0)
+            {
+                return BadRequest(new { message = "Informe o nome e a unidade de medida." });
+            }
+
+            if (await _context.Insumo.AnyAsync(i => i.Nome == nome && i.IdInsumo != ignorarId))
+            {
+                return Conflict(new { message = "Já existe um insumo com esse nome." });
+            }
+
+            if (dto.IdFornecedor.HasValue && !await _context.Fornecedor.AnyAsync(f => f.IdFornecedor == dto.IdFornecedor))
+            {
+                return BadRequest(new { message = "Fornecedor não encontrado." });
+            }
+
+            return null;
+        }
+
+        private Task<InsumoRespostaDto?> ObterResposta(int id)
+        {
+            return _context.Insumo
+                .AsNoTracking()
+                .Where(i => i.IdInsumo == id)
+                .Select(i => new InsumoRespostaDto
+                {
+                    IdInsumo = i.IdInsumo,
+                    Nome = i.Nome,
+                    UnidadeMedida = i.UnidadeMedida,
+                    QuantidadeEstoque = i.QuantidadeEstoque,
+                    PrecoCompra = i.PrecoCompra,
+                    EstoqueMinimo = i.EstoqueMinimo,
+                    IdFornecedor = i.IdFornecedor,
+                    NomeFornecedor = i.Fornecedor != null ? i.Fornecedor.Nome : null,
+                })
+                .FirstOrDefaultAsync();
         }
     }
 }

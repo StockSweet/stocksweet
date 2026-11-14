@@ -96,18 +96,38 @@ async function login(email, senha) {
   return data.resposta;
 }
 
+const reduzMovimento = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+let entrando = false;
+
+function irParaDestino() {
+  window.location.assign(DESTINO_URL);
+}
+
+// O formulário sai com uma animação própria (form-out); só depois o cartão de sucesso entra,
+// na mesma posição, e a barra de progresso marca o tempo até o painel.
 function showSuccess(usuario, manterConectado) {
   const storage = manterConectado ? window.localStorage : window.sessionStorage;
   storage.setItem(TOKEN_KEY, usuario.token);
   storage.setItem(USER_KEY, JSON.stringify(usuario.usuario));
 
+  entrando = true;
+  const espera = reduzMovimento ? 600 : 2700;
   successName.textContent = usuario.usuario?.nome ?? usuario.usuario?.email ?? "usuário";
-  formWrap.classList.add("is-hidden");
-  successState.hidden = false;
-  requestAnimationFrame(() => successState.classList.add("is-visible"));
+  successState.style.setProperty("--redirect", `${Math.max(0.4, (espera - 420 - 750) / 1000)}s`);
+  document.getElementById("successGo").href = DESTINO_URL;
+  hideAlert();
 
-  // dá tempo da animação de sucesso aparecer antes de seguir pro painel
-  window.setTimeout(() => window.location.assign(DESTINO_URL), 1500);
+  const mostrar = () => {
+    formWrap.hidden = true;
+    successState.hidden = false;
+    requestAnimationFrame(() => successState.classList.add("is-visible"));
+  };
+
+  formWrap.classList.add("is-leaving");
+  if (reduzMovimento) mostrar();
+  else window.setTimeout(mostrar, 420);
+
+  window.setTimeout(irParaDestino, espera);
 }
 
 toggleSenhaBtn.addEventListener("click", () => {
@@ -142,7 +162,8 @@ form.addEventListener("submit", async (event) => {
   } catch (error) {
     showAlert(error instanceof Error ? error.message : "Não foi possível entrar. Tente novamente.");
   } finally {
-    setLoading(false);
+    // Com login feito a tela já está de saída: reabilitar os campos só faria o formulário piscar.
+    if (!entrando) setLoading(false);
   }
 });
 

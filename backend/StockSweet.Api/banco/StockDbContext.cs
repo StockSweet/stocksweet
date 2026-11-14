@@ -16,6 +16,7 @@ namespace StockSweet.Api.banco
 
         public DbSet<Usuario> Usuario {get;set;}
         public DbSet<Insumo> Insumo { get; set; }
+        public DbSet<Fornecedor> Fornecedor { get; set; }
         public DbSet<MovimentacaoEstoque> MovimentacaoEstoque { get; set; }
         public DbSet<Receita> Receita { get; set; }
         public DbSet<ItemReceita> ItemReceita { get; set; }
@@ -52,6 +53,17 @@ namespace StockSweet.Api.banco
 
                 mov.HasIndex(m => new { m.IdInsumo, m.Data });
             });
+
+            modelBuilder.Entity<Fornecedor>()
+                .HasIndex(f => f.Nome)
+                .IsUnique();
+
+            // Excluir o fornecedor não apaga o insumo: ele só fica sem fornecedor.
+            modelBuilder.Entity<Insumo>()
+                .HasOne(i => i.Fornecedor)
+                .WithMany()
+                .HasForeignKey(i => i.IdFornecedor)
+                .OnDelete(DeleteBehavior.SetNull);
 
             modelBuilder.Entity<Receita>()
                 .HasIndex(r => r.Nome)
