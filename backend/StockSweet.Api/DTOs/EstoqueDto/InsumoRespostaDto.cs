@@ -13,5 +13,9 @@ namespace StockSweet.Api.DTOs.EstoqueDto
         public decimal PrecoCompra { get; set; }
 
         public decimal EstoqueMinimo { get; set; }
+
+        public int? IdFornecedor { get; set; }
+
+        public string? NomeFornecedor { get; set; }
     }
 }

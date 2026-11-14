@@ -32,5 +32,10 @@ namespace StockSweet.Api.entidades
 
         [Precision(12, 3)]
         public decimal EstoqueMinimo { get; set; }
+
+        // Fornecedor principal (opcional). Se o fornecedor for excluído, o insumo permanece sem fornecedor.
+        public int? IdFornecedor { get; set; }
+
+        public Fornecedor? Fornecedor { get; set; }
     }
 }

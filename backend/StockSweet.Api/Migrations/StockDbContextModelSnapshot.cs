@@ -43,6 +43,43 @@ namespace StockSweet.Api.Migrations
                         });
                 });
 
+            modelBuilder.Entity("StockSweet.Api.entidades.Fornecedor", b =>
+                {
+                    b.Property<int>("IdFornecedor")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("IdFornecedor"));
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<string>("Endereco")
+                        .HasMaxLength(300)
+                        .HasColumnType("varchar(300)");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("varchar(150)");
+
+                    b.Property<string>("Observacao")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<string>("Telefone")
+                        .HasMaxLength(30)
+                        .HasColumnType("varchar(30)");
+
+                    b.HasKey("IdFornecedor");
+
+                    b.HasIndex("Nome")
+                        .IsUnique();
+
+                    b.ToTable("Fornecedor");
+                });
+
             modelBuilder.Entity("StockSweet.Api.entidades.Insumo", b =>
                 {
                     b.Property<int>("IdInsumo")
@@ -54,6 +91,9 @@ namespace StockSweet.Api.Migrations
                     b.Property<decimal>("EstoqueMinimo")
                         .HasPrecision(12, 3)
                         .HasColumnType("decimal(12,3)");
+
+                    b.Property<int?>("IdFornecedor")
+                        .HasColumnType("int");
 
                     b.Property<string>("Nome")
                         .IsRequired()
@@ -74,6 +114,8 @@ namespace StockSweet.Api.Migrations
                         .HasColumnType("varchar(20)");
 
                     b.HasKey("IdInsumo");
+
+                    b.HasIndex("IdFornecedor");
 
                     b.ToTable("Insumo");
                 });
@@ -275,6 +317,16 @@ namespace StockSweet.Api.Migrations
                         .IsUnique();
 
                     b.ToTable("Usuario");
+                });
+
+            modelBuilder.Entity("StockSweet.Api.entidades.Insumo", b =>
+                {
+                    b.HasOne("StockSweet.Api.entidades.Fornecedor", "Fornecedor")
+                        .WithMany()
+                        .HasForeignKey("IdFornecedor")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Fornecedor");
                 });
 
             modelBuilder.Entity("StockSweet.Api.entidades.ItemReceita", b =>
